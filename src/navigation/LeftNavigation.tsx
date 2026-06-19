@@ -3,7 +3,8 @@ import { NavLink, useLocation } from 'react-router-dom'
 import {
   LayoutDashboard, Radio, PackageCheck, Truck, Route,
   AlertTriangle, ScanBarcode, TrendingUp, Building2,
-  Bell, BarChart3, Database, Settings, ChevronRight, Warehouse,
+  Bell, BarChart3, Database, Settings, ChevronRight,
+  Warehouse, PackageOpen, GitCommitVertical,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { NAV_CONFIG } from './config'
@@ -14,7 +15,7 @@ import type { NavItemDef } from '@/types'
 const ICON_MAP: Record<string, React.ComponentType<{ className?: string; size?: number }>> = {
   LayoutDashboard, Radio, PackageCheck, Truck, Route,
   AlertTriangle, ScanBarcode, TrendingUp, Building2,
-  Bell, BarChart3, Database, Settings, Warehouse,
+  Bell, BarChart3, Database, Settings, Warehouse, PackageOpen, GitCommitVertical,
 }
 
 // ─── Props ────────────────────────────────────────────────────────────────────

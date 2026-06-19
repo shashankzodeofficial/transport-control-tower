@@ -20,6 +20,8 @@ import { AnalyticsDashboard }       from '@/pages/analytics'
 import { MasterDataDashboard }      from '@/pages/master-data'
 import { ProfilePage }              from '@/pages/profile/ProfilePage'
 import { HubOperations }            from '@/pages/hub-ops'
+import { DestinationOps }           from '@/pages/dest-ops'
+import { DispatchLifecycle }        from '@/pages/lifecycle'
 
 // Placeholder for unbuilt screens
 function ComingSoon({ label }: { label: string }) {
@@ -104,6 +106,14 @@ export function AppRouter() {
         {/* Hub Operations */}
         <Route path="/hub-ops"           element={<HubOperations />} />
         <Route path="/hub-ops/*"         element={<HubOperations />} />
+
+        {/* Destination Operations */}
+        <Route path="/dest-ops"          element={<DestinationOps />} />
+        <Route path="/dest-ops/*"        element={<DestinationOps />} />
+
+        {/* Dispatch Lifecycle */}
+        <Route path="/lifecycle"         element={<DispatchLifecycle />} />
+        <Route path="/lifecycle/*"       element={<DispatchLifecycle />} />
 
         {/* Profile */}
         <Route path="/profile"           element={<ProfilePage />} />
