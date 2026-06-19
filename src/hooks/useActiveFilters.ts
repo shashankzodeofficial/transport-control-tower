@@ -12,7 +12,6 @@
  * Debug logs: each filter change emits a console.log tagged with the
  * calling module name. Remove the useEffect block after validation.
  */
-import { useEffect } from 'react'
 import { useFilters } from '@/context/FilterContext'
 import { routeOriginRegion, cityRegion, matchesDateRange } from '@/lib/exportCsv'
 
@@ -35,17 +34,7 @@ export function useActiveFilters(moduleName = 'unknown'): ActiveFilters {
   const { region, dateRange } = filters
   const { from, to } = dateRange
 
-  // Temporary debug log — remove this useEffect after filter validation is complete
-  useEffect(() => {
-    console.log(`[Filter:${moduleName}]`, {
-      region:    region || '(all regions)',
-      startDate: from?.toISOString().split('T')[0] ?? 'none',
-      endDate:   to?.toISOString().split('T')[0]   ?? 'none',
-      preset:    dateRange.preset,
-    })
-  }, [region, dateRange, moduleName])
-
-  const matchesRoute = (routeCode: string) =>
+const matchesRoute = (routeCode: string) =>
     !region || routeOriginRegion(routeCode) === region
 
   const matchesCity = (city: string) =>
