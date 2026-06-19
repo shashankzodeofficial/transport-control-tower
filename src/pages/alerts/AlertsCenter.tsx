@@ -6,6 +6,8 @@ import {
   ChevronRight, ArrowUpRight, Timer, Target, Users,
 } from 'lucide-react'
 import { cn, timeAgo } from '@/lib/utils'
+import { useFilters } from '@/context/FilterContext'
+import { routeOriginRegion, matchesDateRange } from '@/lib/exportCsv'
 import { useAlerts, getEscalationLevel, ESCALATION_LABEL, ESCALATION_THRESHOLD, type AcknowledgePayload } from '@/context/AlertContext'
 import type { Alert, AlertType, AckAction } from '@/types'
 import {
@@ -618,6 +620,8 @@ const ESC_FILTERS = [
 
 export function AlertsCenter() {
   const { alerts, acknowledge } = useAlerts()
+  const { filters } = useFilters()
+  const { region, dateRange } = filters
   const [tab,        setTab]        = useState<TabKey>('alerts')
   const [search,     setSearch]     = useState('')
   const [typeFilter, setTypeFilter] = useState('all')
@@ -628,6 +632,10 @@ export function AlertsCenter() {
   const [ackTarget,  setAckTarget]  = useState<Alert | null>(null)
 
   const filtered = useMemo(() => alerts.filter(a => {
+    // Global filters — region and date range
+    if (region && a.routeCode && routeOriginRegion(a.routeCode) !== region) return false
+    if (!matchesDateRange(a.firedAt, dateRange.from, dateRange.to)) return false
+    // Local filters
     if (typeFilter !== 'all' && a.type !== typeFilter) return false
     if (sevFilter  !== 'all' && a.severity !== sevFilter) return false
     if (ackFilter  === 'unread' && a.acknowledged) return false
@@ -644,7 +652,7 @@ export function AlertsCenter() {
         || (a.carrierName?.toLowerCase().includes(q) ?? false)
     }
     return true
-  }), [alerts, typeFilter, sevFilter, ackFilter, escFilter, search])
+  }), [alerts, typeFilter, sevFilter, ackFilter, escFilter, search, region, dateRange])
 
   const unacked       = alerts.filter(a => !a.acknowledged).length
   const escCounts     = {

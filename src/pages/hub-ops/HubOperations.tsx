@@ -5,6 +5,8 @@ import {
   Timer, Activity, LogIn, LogOut, Loader2,
 } from 'lucide-react'
 import { cn, timeAgo } from '@/lib/utils'
+import { useFilters } from '@/context/FilterContext'
+import { routeOriginRegion, matchesDateRange } from '@/lib/exportCsv'
 import {
   HUB_VEHICLES, HUBS, CARRIERS_LIST, STATUS_LABEL, STATUS_ORDER,
   hubDwellMins, loadingTimeMins, turnaroundMins, fmtMins, isDelayed,
@@ -502,23 +504,36 @@ export function HubOperations() {
   const [selectedHub, setSelectedHub] = useState(HUBS[0].id)
   const [showAddModal, setShowAddModal] = useState(false)
 
+  const { filters } = useFilters()
+  const { region, dateRange } = filters
+
+  // Base vehicles after global region + date filter
+  const baseVehicles = useMemo(() =>
+    vehicles.filter(v => {
+      if (region && routeOriginRegion(v.routeCode) !== region) return false
+      if (dateRange.from && dateRange.to && v.arrivedAt && !matchesDateRange(v.arrivedAt, dateRange.from, dateRange.to)) return false
+      return true
+    }),
+    [vehicles, region, dateRange],
+  )
+
   const filtered = useMemo(() =>
-    vehicles.filter(v => statusFilter === 'all' || v.status === statusFilter),
-    [vehicles, statusFilter],
+    baseVehicles.filter(v => statusFilter === 'all' || v.status === statusFilter),
+    [baseVehicles, statusFilter],
   )
 
   const selected = selectedId ? vehicles.find(v => v.id === selectedId) ?? null : null
 
-  // KPI counts
+  // KPI counts use filtered base (without status tab filter)
   const kpis = useMemo(() => ({
-    waiting:    vehicles.filter(v => v.status === 'arrived').length,
-    gateIn:     vehicles.filter(v => v.status === 'gate_in').length,
-    loading:    vehicles.filter(v => v.status === 'loading').length,
-    loaded:     vehicles.filter(v => v.status === 'loaded').length,
-    delayed:    vehicles.filter(v => isDelayed(v)).length,
-    gateOutPending: vehicles.filter(v => v.status === 'loaded').length,
-    dispatched: vehicles.filter(v => v.status === 'dispatched').length,
-  }), [vehicles])
+    waiting:        baseVehicles.filter(v => v.status === 'arrived').length,
+    gateIn:         baseVehicles.filter(v => v.status === 'gate_in').length,
+    loading:        baseVehicles.filter(v => v.status === 'loading').length,
+    loaded:         baseVehicles.filter(v => v.status === 'loaded').length,
+    delayed:        baseVehicles.filter(v => isDelayed(v)).length,
+    gateOutPending: baseVehicles.filter(v => v.status === 'loaded').length,
+    dispatched:     baseVehicles.filter(v => v.status === 'dispatched').length,
+  }), [baseVehicles])
 
   function advanceVehicle(id: string) {
     setVehicles(prev => prev.map(v => {

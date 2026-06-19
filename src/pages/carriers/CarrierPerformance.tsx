@@ -5,6 +5,8 @@ import {
   Shield, Activity, Clock, BarChart2,
 } from 'lucide-react'
 import { cn, timeAgo } from '@/lib/utils'
+import { useFilters } from '@/context/FilterContext'
+import { cityRegion } from '@/lib/exportCsv'
 import { LineChart }   from '@/components/charts/LineChart'
 import { BarChart }    from '@/components/charts/BarChart'
 import { DonutChart }  from '@/components/charts/DonutChart'
@@ -305,8 +307,17 @@ export function CarrierPerformance() {
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [showCharts, setShowCharts] = useState(true)
 
+  const { filters } = useFilters()
+  const { region, dateRange } = filters
+
+  // Base list filtered by global region (hqCity mapped to region)
+  const baseList = useMemo(() =>
+    region ? CARRIERS.filter(c => cityRegion(c.hqCity) === region) : CARRIERS,
+    [region, dateRange],
+  )
+
   const filtered = useMemo(() => {
-    let list = CARRIERS
+    let list = baseList
     if (tab === 'active') list = list.filter(c => c.status === 'active')
     if (tab === 'watch')  list = list.filter(c => ['probation','under_review','suspended'].includes(c.status))
     if (search.trim()) {
@@ -322,7 +333,7 @@ export function CarrierPerformance() {
       const vb = b[sortKey] as number
       return sortDir === 'desc' ? vb - va : va - vb
     })
-  }, [tab, search, sortKey, sortDir])
+  }, [baseList, tab, search, sortKey, sortDir])
 
   const selected = selectedId ? CARRIERS.find(c => c.id === selectedId) ?? null : null
 
@@ -333,9 +344,9 @@ export function CarrierPerformance() {
 
   const tabsWithBadge = STATUS_TABS.map(t => ({
     ...t,
-    badge: t.key === 'all' ? CARRIERS.length :
-           t.key === 'active' ? CARRIERS.filter(c => c.status === 'active').length :
-           CARRIERS.filter(c => ['probation','under_review','suspended'].includes(c.status)).length,
+    badge: t.key === 'all' ? baseList.length :
+           t.key === 'active' ? baseList.filter(c => c.status === 'active').length :
+           baseList.filter(c => ['probation','under_review','suspended'].includes(c.status)).length,
   }))
 
   const donutData = TIER_DIST.filter(t => t.count > 0).map(t => ({ name: t.tier, value: t.count, color: t.color }))

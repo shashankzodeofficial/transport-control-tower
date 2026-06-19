@@ -5,6 +5,8 @@ import {
   AlertTriangle, Activity, TrendingUp,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { useFilters } from '@/context/FilterContext'
+import { routeOriginRegion, matchesDateRange } from '@/lib/exportCsv'
 import {
   DISPATCH_LIFECYCLES, LIFECYCLE_STAGES, STAGE_LABEL, STAGE_SHORT,
   STAGE_PHASE, PHASE_STYLE, SLA_STYLE, SLA_LABEL,
@@ -391,9 +393,22 @@ export function DispatchLifecycle() {
   const [search, setSearch]         = useState('')
   const kanbanRef = useRef<HTMLDivElement>(null)
 
+  const { filters } = useFilters()
+  const { region, dateRange } = filters
+
+  // Base dispatches after global region + date filter
+  const baseDispatches = useMemo(() =>
+    dispatches.filter(d => {
+      if (region && routeOriginRegion(d.routeCode) !== region) return false
+      if (d.plannedAt && !matchesDateRange(d.plannedAt, dateRange.from, dateRange.to)) return false
+      return true
+    }),
+    [dispatches, region, dateRange],
+  )
+
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase()
-    return dispatches.filter(d => {
+    return baseDispatches.filter(d => {
       if (phaseFilter !== 'all' && STAGE_PHASE[d.status] !== phaseFilter) return false
       if (slaFilter !== 'all' && d.slaStatus !== slaFilter) return false
       if (!q) return true
@@ -406,19 +421,19 @@ export function DispatchLifecycle() {
         d.destination.toLowerCase().includes(q)
       )
     })
-  }, [dispatches, phaseFilter, slaFilter, search])
+  }, [baseDispatches, phaseFilter, slaFilter, search])
 
   const selected = selectedId ? dispatches.find(d => d.id === selectedId) ?? null : null
 
   const kpis = useMemo(() => ({
-    total:     dispatches.length,
-    origin:    dispatches.filter(d => STAGE_PHASE[d.status] === 'origin').length,
-    transit:   dispatches.filter(d => STAGE_PHASE[d.status] === 'transit').length,
-    dest:      dispatches.filter(d => STAGE_PHASE[d.status] === 'destination').length,
-    complete:  dispatches.filter(d => STAGE_PHASE[d.status] === 'complete').length,
-    atRisk:    dispatches.filter(d => d.slaStatus === 'at_risk').length,
-    breached:  dispatches.filter(d => d.slaStatus === 'breached').length,
-  }), [dispatches])
+    total:    baseDispatches.length,
+    origin:   baseDispatches.filter(d => STAGE_PHASE[d.status] === 'origin').length,
+    transit:  baseDispatches.filter(d => STAGE_PHASE[d.status] === 'transit').length,
+    dest:     baseDispatches.filter(d => STAGE_PHASE[d.status] === 'destination').length,
+    complete: baseDispatches.filter(d => STAGE_PHASE[d.status] === 'complete').length,
+    atRisk:   baseDispatches.filter(d => d.slaStatus === 'at_risk').length,
+    breached: baseDispatches.filter(d => d.slaStatus === 'breached').length,
+  }), [baseDispatches])
 
   // Group for kanban
   const kanbanGroups = useMemo(() => LIFECYCLE_STAGES.map(stage => ({

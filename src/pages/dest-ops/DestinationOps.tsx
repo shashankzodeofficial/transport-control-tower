@@ -6,6 +6,8 @@ import {
   TriangleAlert, PackageCheck, ScanLine, Loader2, Navigation,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { useFilters } from '@/context/FilterContext'
+import { routeOriginRegion, matchesDateRange } from '@/lib/exportCsv'
 import {
   DEST_VEHICLES, DEST_HUBS, CARRIERS_LIST, DOCK_NUMBERS,
   DEST_STATUS_ORDER, DEST_STATUS_LABEL,
@@ -527,6 +529,9 @@ export function DestinationOps() {
   const [showAddModal, setShowAddModal] = useState(false)
   const searchRef = useRef<HTMLInputElement>(null)
 
+  const { filters } = useFilters()
+  const { region, dateRange } = filters
+
   // Ctrl+K or / to focus search
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
@@ -539,9 +544,19 @@ export function DestinationOps() {
     return () => window.removeEventListener('keydown', onKey)
   }, [])
 
+  // Base vehicles after global region + date filter (routeCode origin = origin region)
+  const baseVehicles = useMemo(() =>
+    vehicles.filter(v => {
+      if (region && routeOriginRegion(v.routeCode) !== region) return false
+      if (dateRange.from && dateRange.to && v.arrivedAt && !matchesDateRange(v.arrivedAt, dateRange.from, dateRange.to)) return false
+      return true
+    }),
+    [vehicles, region, dateRange],
+  )
+
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase()
-    return vehicles.filter(v => {
+    return baseVehicles.filter(v => {
       if (statusFilter !== 'all' && v.status !== statusFilter) return false
       if (!q) return true
       return (
@@ -552,19 +567,19 @@ export function DestinationOps() {
         v.driverMobile.includes(q)
       )
     })
-  }, [vehicles, statusFilter, search])
+  }, [baseVehicles, statusFilter, search])
 
   const selected = selectedId ? vehicles.find(v => v.id === selectedId) ?? null : null
 
   const kpis = useMemo(() => ({
-    inTransit:  vehicles.filter(v => v.status === 'in_transit').length,
-    arrived:    vehicles.filter(v => v.status === 'arrived').length,
-    gateIn:     vehicles.filter(v => v.status === 'gate_in').length,
-    unloading:  vehicles.filter(v => ['dock_assigned','unloading'].includes(v.status)).length,
-    pendingReceipt: vehicles.filter(v => v.status === 'unloaded').length,
-    exceptions: vehicles.filter(v => v.exceptionCount > 0 && !['reconciled','closed'].includes(v.status)).length,
-    closedToday: vehicles.filter(v => v.status === 'closed').length,
-  }), [vehicles])
+    inTransit:      baseVehicles.filter(v => v.status === 'in_transit').length,
+    arrived:        baseVehicles.filter(v => v.status === 'arrived').length,
+    gateIn:         baseVehicles.filter(v => v.status === 'gate_in').length,
+    unloading:      baseVehicles.filter(v => ['dock_assigned','unloading'].includes(v.status)).length,
+    pendingReceipt: baseVehicles.filter(v => v.status === 'unloaded').length,
+    exceptions:     baseVehicles.filter(v => v.exceptionCount > 0 && !['reconciled','closed'].includes(v.status)).length,
+    closedToday:    baseVehicles.filter(v => v.status === 'closed').length,
+  }), [baseVehicles])
 
   function advanceVehicle(id: string, dock?: string) {
     setVehicles(prev => prev.map(v => {

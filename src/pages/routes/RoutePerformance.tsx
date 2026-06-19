@@ -5,6 +5,7 @@ import {
   Clock, Package, DollarSign, Activity,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { useFilters } from '@/context/FilterContext'
 import { GradeBadge }  from '@/components/badges/GradeBadge'
 import { SparklineChart } from '@/components/charts/SparklineChart'
 import { BarChart }    from '@/components/charts/BarChart'
@@ -246,8 +247,17 @@ export function RoutePerformance() {
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [showCharts, setShowCharts] = useState(true)
 
+  const { filters } = useFilters()
+  const { region, dateRange } = filters
+
+  // Base list filtered by global region (regionOrigin field is 'North'/'South'/etc.)
+  const baseList = useMemo(() =>
+    region ? ROUTE_DETAILS.filter(r => r.regionOrigin.toLowerCase() === region) : ROUTE_DETAILS,
+    [region, dateRange],
+  )
+
   const filtered = useMemo(() => {
-    let list = ROUTE_DETAILS
+    let list = baseList
     if (tab !== 'all') list = list.filter(r => r.grade === tab)
     if (search.trim()) {
       const q = search.toLowerCase()
@@ -263,7 +273,7 @@ export function RoutePerformance() {
       const vb = b[sortKey] as number
       return sortDir === 'desc' ? vb - va : va - vb
     })
-  }, [tab, search, sortKey, sortDir])
+  }, [baseList, tab, search, sortKey, sortDir])
 
   const selected = selectedId ? ROUTE_DETAILS.find(r => r.id === selectedId) ?? null : null
 
@@ -274,7 +284,7 @@ export function RoutePerformance() {
 
   const tabsWithBadge = GRADE_TABS.map(t => ({
     ...t,
-    badge: t.key === 'all' ? ROUTE_DETAILS.length : ROUTE_DETAILS.filter(r => r.grade === t.key).length,
+    badge: t.key === 'all' ? baseList.length : baseList.filter(r => r.grade === t.key).length,
   }))
 
   const donutData = GRADE_DIST.map(g => ({ name: `Grade ${g.grade}`, value: g.count, color: g.color }))

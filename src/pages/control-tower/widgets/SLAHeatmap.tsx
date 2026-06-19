@@ -1,10 +1,9 @@
-import React, { useState } from 'react'
+import React, { useState, useMemo } from 'react'
 import { cn } from '@/lib/utils'
+import { useFilters } from '@/context/FilterContext'
+import { routeOriginRegion } from '@/lib/exportCsv'
 import { LineChart } from '@/components/charts/LineChart'
 import { SLA_HEATMAP, SLA_TREND_7D } from '../mock/data'
-
-const ROUTES    = [...new Set(SLA_HEATMAP.map(c => c.route))]
-const CARRIERS  = [...new Set(SLA_HEATMAP.map(c => c.carrier))]
 
 function heatColor(breachRate: number): string {
   if (breachRate === 0)   return '#F0FDF4'  // green-50
@@ -27,9 +26,20 @@ export function SLAHeatmap() {
   const [view, setView] = useState<'heatmap' | 'trend'>('heatmap')
   const [hovered, setHovered] = useState<HoveredCell | null>(null)
 
-  const totalBreaches  = SLA_HEATMAP.reduce((s, c) => s + c.slaBreaches, 0)
-  const totalAtRisk    = SLA_HEATMAP.reduce((s, c) => s + c.slaAtRisk, 0)
-  const worstCell      = SLA_HEATMAP.reduce((m, c) => c.breachRate > m.breachRate ? c : m, SLA_HEATMAP[0])
+  const { filters } = useFilters()
+  const { region, dateRange } = filters
+
+  const cells = useMemo(() =>
+    region ? SLA_HEATMAP.filter(c => routeOriginRegion(c.route) === region) : SLA_HEATMAP,
+    [region, dateRange],
+  )
+
+  const routes   = useMemo(() => [...new Set(cells.map(c => c.route))],   [cells])
+  const carriers = useMemo(() => [...new Set(cells.map(c => c.carrier))], [cells])
+
+  const totalBreaches  = cells.reduce((s, c) => s + c.slaBreaches, 0)
+  const totalAtRisk    = cells.reduce((s, c) => s + c.slaAtRisk, 0)
+  const worstCell      = cells.length ? cells.reduce((m, c) => c.breachRate > m.breachRate ? c : m, cells[0]) : null
 
   return (
     <div className="rounded-xl border border-slate-200 bg-white overflow-hidden">
@@ -84,7 +94,7 @@ export function SLAHeatmap() {
                   <th className="py-1.5 pr-3 text-left text-xxs font-semibold uppercase tracking-wide text-slate-400 w-24">
                     Route ↓ / Carrier →
                   </th>
-                  {CARRIERS.map(c => (
+                  {carriers.map(c => (
                     <th key={c} className="px-1 py-1.5 text-center text-xxs font-semibold text-slate-500 whitespace-nowrap">
                       {c}
                     </th>
@@ -92,11 +102,11 @@ export function SLAHeatmap() {
                 </tr>
               </thead>
               <tbody>
-                {ROUTES.map(route => (
+                {routes.map(route => (
                   <tr key={route}>
                     <td className="py-1 pr-3 text-xxs font-semibold text-slate-600 whitespace-nowrap">{route}</td>
-                    {CARRIERS.map(carrier => {
-                      const cell = SLA_HEATMAP.find(c => c.route === route && c.carrier === carrier)
+                    {carriers.map(carrier => {
+                      const cell = cells.find(c => c.route === route && c.carrier === carrier)
                       if (!cell) return <td key={carrier} />
                       const bg   = heatColor(cell.breachRate)
                       const text = textColor(cell.breachRate)
@@ -130,11 +140,15 @@ export function SLAHeatmap() {
                 <span className="text-xs text-slate-500">Breach Rate: <span className="font-semibold text-red-600">{hovered.breachRate}%</span></span>
                 <span className="text-xs text-slate-500">Breaches: <span className="font-semibold">{hovered.breaches}/{hovered.total}</span></span>
               </div>
-            ) : (
+            ) : worstCell ? (
               <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-2 flex items-center gap-3">
                 <span className="text-xs text-amber-700">
                   🔥 Worst: <span className="font-semibold">{worstCell.route} × {worstCell.carrier}</span> — {worstCell.breachRate}% breach rate
                 </span>
+              </div>
+            ) : (
+              <div className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-2">
+                <span className="text-xs text-slate-400">No SLA data for selected region</span>
               </div>
             )}
           </div>

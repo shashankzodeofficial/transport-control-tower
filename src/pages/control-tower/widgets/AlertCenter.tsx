@@ -1,6 +1,8 @@
-import React, { useState } from 'react'
+import React, { useState, useMemo } from 'react'
 import { Bell, BellOff, CheckCheck, Filter } from 'lucide-react'
 import { cn, timeAgo } from '@/lib/utils'
+import { useFilters } from '@/context/FilterContext'
+import { routeOriginRegion, matchesDateRange } from '@/lib/exportCsv'
 import { CT_ALERTS } from '../mock/data'
 import type { Alert } from '@/types'
 
@@ -22,10 +24,23 @@ export function AlertCenter() {
   const [alerts, setAlerts] = useState<Alert[]>(CT_ALERTS)
   const [filter, setFilter] = useState<'all' | 'unread' | 'critical'>('all')
 
-  const unread   = alerts.filter(a => !a.acknowledged).length
-  const critical = alerts.filter(a => a.severity === 'critical' && !a.acknowledged).length
+  const { filters } = useFilters()
+  const { region, dateRange } = filters
 
-  const visible = alerts.filter(a => {
+  // Apply global region + date filter before local severity/ack filter
+  const regionDateFiltered = useMemo(() =>
+    alerts.filter(a => {
+      if (region && a.routeCode && routeOriginRegion(a.routeCode) !== region) return false
+      if (!matchesDateRange(a.firedAt, dateRange.from, dateRange.to)) return false
+      return true
+    }),
+    [alerts, region, dateRange],
+  )
+
+  const unread   = regionDateFiltered.filter(a => !a.acknowledged).length
+  const critical = regionDateFiltered.filter(a => a.severity === 'critical' && !a.acknowledged).length
+
+  const visible = regionDateFiltered.filter(a => {
     if (filter === 'unread')   return !a.acknowledged
     if (filter === 'critical') return a.severity === 'critical'
     return true
