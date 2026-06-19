@@ -177,6 +177,21 @@ export type AlertType =
   | 'OVERDUE_RECONCILIATION'
   | 'INTEGRATION_FAILURE'
 
+export type AckAction =
+  | 'carrier_escalated'
+  | 'alternate_vehicle'
+  | 'route_changed'
+  | 'delivery_replanned'
+  | 'driver_contacted'
+  | 'hub_escalated'
+  | 'customer_escalated'
+  | 'monitoring_only'
+
+export type EscalationLevel =
+  | 'regional_manager'
+  | 'transport_head'
+  | 'control_tower'
+
 export interface Alert {
   id: string
   type: AlertType
@@ -184,6 +199,14 @@ export interface Alert {
   message: string
   dispatchId?: string
   routeCode?: string
+  carrierName?: string
+  delayMins?: number
   firedAt: string
   acknowledged: boolean
+  ackedAt?: string
+  ackedBy?: string
+  ackAction?: AckAction
+  ackRemarks?: string
+  escalationLevel?: EscalationLevel
+  closedAt?: string
 }

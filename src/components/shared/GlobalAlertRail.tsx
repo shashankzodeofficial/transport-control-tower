@@ -30,6 +30,7 @@ const SEVERITY_CONFIG = {
 }
 
 function AlertRailCard({ alert, onAcknowledge }: { alert: Alert; onAcknowledge: (id: string) => void }) {
+  // Rail dismissal uses monitoring_only — full ack with action/remarks is done in AlertsCenter
   const cfg  = SEVERITY_CONFIG[alert.severity] ?? SEVERITY_CONFIG.medium
   const Icon = cfg.icon
   return (
@@ -61,6 +62,8 @@ function AlertRailCard({ alert, onAcknowledge }: { alert: Alert; onAcknowledge: 
 export function GlobalAlertRail() {
   const { alerts, isRailOpen, toggleRail, acknowledge, unacknowledgedCount, criticalCount } = useAlerts()
   const visibleAlerts = alerts.filter(a => !a.acknowledged).slice(0, 3)
+  // Quick-dismiss from rail uses monitoring_only — full structured ack done in CT Alerts page
+  const quickDismiss = (id: string) => acknowledge(id, { action: 'monitoring_only', remarks: 'Dismissed from alert rail — follow up in CT Alerts.' })
 
   return (
     <div className="fixed bottom-4 right-4 z-alert flex flex-col items-end gap-2">
@@ -68,7 +71,7 @@ export function GlobalAlertRail() {
       {isRailOpen && visibleAlerts.length > 0 && (
         <div className="w-80 space-y-2 animate-scale-in">
           {visibleAlerts.map(alert => (
-            <AlertRailCard key={alert.id} alert={alert} onAcknowledge={acknowledge} />
+            <AlertRailCard key={alert.id} alert={alert} onAcknowledge={quickDismiss} />
           ))}
           {unacknowledgedCount > 3 && (
             <p className="text-center text-xs text-slate-500">
