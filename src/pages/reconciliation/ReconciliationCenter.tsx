@@ -5,7 +5,8 @@ import {
   ArrowUpDown, DollarSign,
 } from 'lucide-react'
 import { cn, timeAgo } from '@/lib/utils'
-import { exportCsv } from '@/lib/exportCsv'
+import { exportCsv, cityRegion, matchesDateRange } from '@/lib/exportCsv'
+import { useFilters } from '@/context/FilterContext'
 import { TabStrip }     from '@/layout/TabStrip'
 import { BarChart }     from '@/components/charts/BarChart'
 import { LineChart }    from '@/components/charts/LineChart'
@@ -101,7 +102,7 @@ function ReconciliationDetail({ rec, onClose }: { rec: ReconciliationRecord; onC
   const impact     = rec.discrepancies.reduce((s, d) => s + d.financialImpact, 0)
 
   return (
-    <div className="flex h-full flex-col border-l border-slate-200 bg-white">
+    <div className="flex flex-1 flex-col bg-white overflow-hidden">
       <div className="flex items-start justify-between border-b border-slate-100 px-5 py-4">
         <div>
           <div className="flex items-center gap-2 mb-1">
@@ -276,9 +277,21 @@ export function ReconciliationCenter() {
   const [tab, setTab]           = useState('all')
   const [search, setSearch]     = useState('')
   const [selectedId, setSelectedId] = useState<string | null>(null)
+  const { filters } = useFilters()
+  const { region, dateRange } = filters
+
+  // Apply global region + date filters first
+  const globalFiltered = useMemo(() =>
+    RECONCILIATIONS.filter(rec => {
+      if (region && cityRegion(rec.origin) !== region) return false
+      if (rec.arrivedAt && !matchesDateRange(rec.arrivedAt, dateRange.from, dateRange.to)) return false
+      return true
+    }),
+    [region, dateRange],
+  )
 
   const filtered = useMemo(() => {
-    let list = filterTab(RECONCILIATIONS, tab)
+    let list = filterTab(globalFiltered, tab)
     if (search.trim()) {
       const q = search.toLowerCase()
       list = list.filter(r =>
@@ -289,13 +302,14 @@ export function ReconciliationCenter() {
       )
     }
     return list
-  }, [tab, search])
+  }, [globalFiltered, tab, search])
 
   const selected = selectedId ? RECONCILIATIONS.find(r => r.id === selectedId) ?? null : null
 
+  // Tab counts reflect global-filtered list (respects region + date)
   const tabsWithBadge = TABS.map(t => ({
     ...t,
-    badge: t.key === 'all' ? RECONCILIATIONS.length : RECONCILIATIONS.filter(r => r.reconStatus === t.key).length,
+    badge: t.key === 'all' ? globalFiltered.length : globalFiltered.filter(r => r.reconStatus === t.key).length,
   }))
 
   return (
@@ -374,7 +388,7 @@ export function ReconciliationCenter() {
       </div>
 
       {/* Body */}
-      <div className="flex flex-1 overflow-hidden">
+      <div className="flex flex-1 min-h-0 overflow-hidden">
         <div className="flex-1 overflow-auto">
           <table className="w-full text-sm">
             <thead className="sticky top-0 bg-slate-50 border-b border-slate-200 z-10">
@@ -407,7 +421,7 @@ export function ReconciliationCenter() {
         </div>
 
         {selected && (
-          <div className="w-96 shrink-0 overflow-hidden">
+          <div className="w-96 shrink-0 flex flex-col border-l border-slate-200">
             <ReconciliationDetail rec={selected} onClose={() => setSelectedId(null)} />
           </div>
         )}

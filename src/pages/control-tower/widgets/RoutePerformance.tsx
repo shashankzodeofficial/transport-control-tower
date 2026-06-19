@@ -1,11 +1,13 @@
-import React, { useState } from 'react'
+import React, { useState, useMemo } from 'react'
 import { ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { useFilters } from '@/context/FilterContext'
+import { routeOriginRegion } from '@/lib/exportCsv'
 import { GradeBadge } from '@/components/badges/GradeBadge'
 import { TrendBadge } from '@/components/badges/TrendBadge'
 import { SparklineChart } from '@/components/charts/SparklineChart'
 import { DonutChart } from '@/components/charts/DonutChart'
-import { ROUTE_PERFORMANCE, GRADE_DISTRIBUTION } from '../mock/data'
+import { ROUTE_PERFORMANCE } from '../mock/data'
 import type { RoutePerf } from '../mock/data'
 
 const GRADE_COLORS: Record<string, string> = {
@@ -18,18 +20,42 @@ export function RoutePerformance() {
   const [sortKey, setSortKey]   = useState<SortKey>('otdPct')
   const [sortDir, setSortDir]   = useState<'asc' | 'desc'>('desc')
   const [gradeFilter, setGradeFilter] = useState<string | null>(null)
+  const { filters } = useFilters()
+  const { region } = filters
 
   function handleSort(key: SortKey) {
     if (sortKey === key) setSortDir(d => d === 'asc' ? 'desc' : 'asc')
     else { setSortKey(key); setSortDir(key === 'avgDelayHrs' || key === 'exceptions' ? 'asc' : 'desc') }
   }
 
-  const sorted = [...ROUTE_PERFORMANCE]
-    .filter(r => !gradeFilter || r.grade === gradeFilter)
-    .sort((a, b) => {
-      const mul = sortDir === 'asc' ? 1 : -1
-      return (a[sortKey] as number - (b[sortKey] as number)) * mul
-    })
+  const baseRoutes = useMemo(() =>
+    region
+      ? ROUTE_PERFORMANCE.filter(r => routeOriginRegion(r.routeCode) === region)
+      : ROUTE_PERFORMANCE,
+    [region],
+  )
+
+  const gradeDistribution = useMemo(() => {
+    const c: Record<string, number> = { A: 0, B: 0, C: 0, D: 0, F: 0 }
+    baseRoutes.forEach(r => { c[r.grade] = (c[r.grade] ?? 0) + 1 })
+    return [
+      { name: 'A', value: c.A, color: GRADE_COLORS.A },
+      { name: 'B', value: c.B, color: GRADE_COLORS.B },
+      { name: 'C', value: c.C, color: GRADE_COLORS.C },
+      { name: 'D', value: c.D, color: GRADE_COLORS.D },
+      { name: 'F', value: c.F, color: GRADE_COLORS.F },
+    ]
+  }, [baseRoutes])
+
+  const sorted = useMemo(() =>
+    [...baseRoutes]
+      .filter(r => !gradeFilter || r.grade === gradeFilter)
+      .sort((a, b) => {
+        const mul = sortDir === 'asc' ? 1 : -1
+        return ((a[sortKey] as number) - (b[sortKey] as number)) * mul
+      }),
+    [baseRoutes, gradeFilter, sortKey, sortDir],
+  )
 
   return (
     <div className="rounded-xl border border-slate-200 bg-white overflow-hidden">
@@ -37,7 +63,7 @@ export function RoutePerformance() {
       <div className="flex items-center justify-between border-b border-slate-100 px-5 py-4">
         <div>
           <h3 className="text-sm font-semibold text-slate-800">Route Performance</h3>
-          <p className="text-xs text-slate-400 mt-0.5">{ROUTE_PERFORMANCE.length} routes · sorted by {sortKey}</p>
+          <p className="text-xs text-slate-400 mt-0.5">{baseRoutes.length} routes{region ? ` · ${region}` : ''} · sorted by {sortKey}</p>
         </div>
         <div className="flex items-center gap-4">
           {/* Grade filter */}
@@ -60,7 +86,7 @@ export function RoutePerformance() {
           </div>
           {/* Donut summary */}
           <div className="flex items-center gap-1">
-            {GRADE_DISTRIBUTION.filter(g => g.value > 0).map(g => (
+            {gradeDistribution.filter(g => g.value > 0).map(g => (
               <div key={g.name} className="flex items-center gap-1">
                 <span className="h-2 w-2 rounded-full" style={{ backgroundColor: g.color }} />
                 <span className="text-xxs text-slate-500">{g.name}:{g.value}</span>
@@ -97,13 +123,13 @@ export function RoutePerformance() {
         <div className="col-span-2 border-l border-slate-100 px-4 py-4 flex flex-col items-center">
           <p className="text-xs font-semibold uppercase tracking-wide text-slate-400 mb-2 self-start">Grade Mix</p>
           <DonutChart
-            data={GRADE_DISTRIBUTION.map(g => ({ name: g.name, value: Math.max(g.value, 0.1), color: g.color }))}
+            data={gradeDistribution.map(g => ({ name: g.name, value: Math.max(g.value, 0.01), color: g.color }))}
             height={130}
             innerRadius="55%"
             outerRadius="78%"
           />
           <div className="mt-3 w-full space-y-1.5">
-            {GRADE_DISTRIBUTION.filter(g => g.value > 0).map(g => (
+            {gradeDistribution.filter(g => g.value > 0).map(g => (
               <div key={g.name} className="flex items-center justify-between">
                 <div className="flex items-center gap-1.5">
                   <span className="h-2 w-2 rounded-sm" style={{ backgroundColor: g.color }} />

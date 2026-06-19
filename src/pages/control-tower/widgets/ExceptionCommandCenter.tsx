@@ -1,6 +1,8 @@
-import React, { useState } from 'react'
+import React, { useState, useMemo } from 'react'
 import { AlertTriangle, Clock, User, ChevronRight, TrendingUp } from 'lucide-react'
 import { cn, timeAgo } from '@/lib/utils'
+import { useFilters } from '@/context/FilterContext'
+import { routeOriginRegion, matchesDateRange } from '@/lib/exportCsv'
 import { SeverityBadge } from '@/components/badges/SeverityBadge'
 import { DonutChart } from '@/components/charts/DonutChart'
 import { LineChart } from '@/components/charts/LineChart'
@@ -16,9 +18,32 @@ const STATUS_STYLES: Record<string, string> = {
 
 export function ExceptionCommandCenter() {
   const [activeTab, setActiveTab] = useState<'live' | 'trend'>('live')
-  const total = LIVE_EXCEPTIONS.length
-  const critical = LIVE_EXCEPTIONS.filter(e => e.severity === 'critical').length
-  const escalated = LIVE_EXCEPTIONS.filter(e => e.status === 'ESCALATED').length
+  const { filters } = useFilters()
+  const { region, dateRange } = filters
+
+  const liveExceptions = useMemo(() =>
+    LIVE_EXCEPTIONS.filter(ex => {
+      if (region && routeOriginRegion(ex.routeCode) !== region) return false
+      if (!matchesDateRange(ex.raisedAt, dateRange.from, dateRange.to)) return false
+      return true
+    }),
+    [region, dateRange],
+  )
+
+  const exceptionSummary = useMemo(() => {
+    const counts: Record<string, number> = {}
+    liveExceptions.forEach(ex => { counts[ex.category] = (counts[ex.category] ?? 0) + 1 })
+    const total = liveExceptions.length || 1
+    return EXCEPTION_SUMMARY.map(e => ({
+      ...e,
+      count: counts[e.category] ?? 0,
+      pct: Math.round((counts[e.category] ?? 0) / total * 100),
+    }))
+  }, [liveExceptions])
+
+  const total = liveExceptions.length
+  const critical = liveExceptions.filter(e => e.severity === 'critical').length
+  const escalated = liveExceptions.filter(e => e.status === 'ESCALATED').length
 
   return (
     <div className="rounded-xl border border-slate-200 bg-white overflow-hidden">
@@ -59,13 +84,13 @@ export function ExceptionCommandCenter() {
         {/* Left — donut + category breakdown */}
         <div className="col-span-2 border-r border-slate-100 px-5 py-4">
           <DonutChart
-            data={EXCEPTION_SUMMARY.map(e => ({ name: e.category, value: e.count, color: e.color }))}
+            data={exceptionSummary.map(e => ({ name: e.category, value: Math.max(e.count, 0.01), color: e.color }))}
             height={160}
-            centerValue={LIVE_EXCEPTIONS.length}
+            centerValue={total}
             centerLabel="Open"
           />
           <div className="mt-3 space-y-2">
-            {EXCEPTION_SUMMARY.map(ex => (
+            {exceptionSummary.map(ex => (
               <div key={ex.category} className="flex items-center gap-2">
                 <span className="h-2 w-2 rounded-full shrink-0" style={{ backgroundColor: ex.color }} />
                 <span className="flex-1 text-xs text-slate-600 truncate">{ex.category}</span>
@@ -79,8 +104,11 @@ export function ExceptionCommandCenter() {
         {/* Right panel */}
         <div className="col-span-3 flex flex-col">
           {activeTab === 'live' ? (
-            <div className="flex-1 overflow-y-auto divide-y divide-slate-50">
-              {LIVE_EXCEPTIONS.map(ex => {
+            <div className="max-h-80 overflow-y-auto divide-y divide-slate-50">
+              {liveExceptions.length === 0 && (
+                <p className="py-8 text-center text-xs text-slate-400">No exceptions match current filters</p>
+              )}
+              {liveExceptions.map(ex => {
                 const isBreached = ex.slaBreachAt && new Date(ex.slaBreachAt) < new Date()
                 const hoursLeft  = ex.slaBreachAt
                   ? Math.round((new Date(ex.slaBreachAt).getTime() - Date.now()) / 3600000 * 10) / 10

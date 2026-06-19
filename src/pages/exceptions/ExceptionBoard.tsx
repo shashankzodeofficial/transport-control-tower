@@ -5,7 +5,8 @@ import {
   Zap, X, RefreshCw, Download, CircleDot, Plus,
 } from 'lucide-react'
 import { cn, timeAgo } from '@/lib/utils'
-import { exportCsv } from '@/lib/exportCsv'
+import { exportCsv, cityRegion, matchesDateRange } from '@/lib/exportCsv'
+import { useFilters } from '@/context/FilterContext'
 import { SeverityBadge } from '@/components/badges/SeverityBadge'
 import { KPICard }       from '@/components/kpi/KPICard'
 import { DonutChart }    from '@/components/charts/DonutChart'
@@ -91,7 +92,7 @@ function CommentThread({ comments }: { comments: ExcComment[] }) {
 
 function ExceptionDetail({ ex, onClose }: { ex: FullException; onClose: () => void }) {
   return (
-    <div className="flex h-full flex-col border-l border-slate-200 bg-white">
+    <div className="flex flex-1 flex-col bg-white overflow-hidden">
       {/* Header */}
       <div className="flex items-start justify-between border-b border-slate-100 px-5 py-4">
         <div>
@@ -365,8 +366,20 @@ export function ExceptionBoard() {
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [showCharts, setShowCharts] = useState(true)
   const [showRaiseModal, setShowRaiseModal] = useState(false)
+  const { filters } = useFilters()
+  const { region, dateRange } = filters
 
-  const tabbed   = useMemo(() => filterByTab(EXCEPTIONS, tab), [tab])
+  // Apply global region + date filters first
+  const globalFiltered = useMemo(() =>
+    EXCEPTIONS.filter(ex => {
+      if (region && cityRegion(ex.origin) !== region) return false
+      if (!matchesDateRange(ex.raisedAt, dateRange.from, dateRange.to)) return false
+      return true
+    }),
+    [region, dateRange],
+  )
+
+  const tabbed   = useMemo(() => filterByTab(globalFiltered, tab), [globalFiltered, tab])
   const filtered = useMemo(() => {
     let list = tabbed
     if (severityFilter !== 'all') list = list.filter(e => e.severity === severityFilter)
@@ -385,9 +398,10 @@ export function ExceptionBoard() {
 
   const selected = selectedId ? EXCEPTIONS.find(e => e.id === selectedId) ?? null : null
 
+  // Tab counts reflect global-filtered list (respects region + date)
   const tabsWithBadge = STATUS_TABS.map(t => ({
     ...t,
-    badge: t.key === 'all' ? EXCEPTIONS.length : filterByTab(EXCEPTIONS, t.key).length,
+    badge: t.key === 'all' ? globalFiltered.length : filterByTab(globalFiltered, t.key).length,
   }))
 
   const donutData = EXC_BY_CATEGORY.map(c => ({ name: c.category, value: c.count, color: c.color }))
@@ -555,7 +569,7 @@ export function ExceptionBoard() {
       </div>
 
       {/* Body: table + detail panel */}
-      <div className="flex flex-1 overflow-hidden">
+      <div className="flex flex-1 min-h-0 overflow-hidden">
         {/* Table */}
         <div className="flex-1 overflow-auto">
           <table className="w-full text-sm">
@@ -592,7 +606,7 @@ export function ExceptionBoard() {
 
         {/* Detail panel */}
         {selected && (
-          <div className="w-96 shrink-0 overflow-hidden">
+          <div className="w-96 shrink-0 flex flex-col border-l border-slate-200">
             <ExceptionDetail ex={selected} onClose={() => setSelectedId(null)} />
           </div>
         )}

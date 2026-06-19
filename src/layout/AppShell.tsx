@@ -53,7 +53,7 @@ export function AppShell() {
         />
 
         {/* Scrollable content */}
-        <main className="flex-1 overflow-y-auto" id="main-content">
+        <main className="flex-1 overflow-hidden flex flex-col" id="main-content">
           <Outlet />
         </main>
       </div>

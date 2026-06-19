@@ -1,6 +1,7 @@
-import React, { useState } from 'react'
+import React, { useState, useMemo } from 'react'
 import { Building2, Star } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { useFilters } from '@/context/FilterContext'
 import { TrendBadge } from '@/components/badges/TrendBadge'
 import { SparklineChart } from '@/components/charts/SparklineChart'
 import { BarChart } from '@/components/charts/BarChart'
@@ -20,15 +21,22 @@ const TREND_COLORS: Record<string, string> = {
 export function CarrierPerformance() {
   const [view, setView] = useState<'cards' | 'chart'>('cards')
   const [tierFilter, setTierFilter] = useState<string | null>(null)
+  const { filters } = useFilters()
+  const { region } = filters
 
-  const filtered = CARRIER_PERFORMANCE.filter(c => !tierFilter || c.tier === tierFilter)
+  // Carriers don't have a direct origin — filter by tier and show region label in header
+  const baseCarriers = CARRIER_PERFORMANCE
+  const filtered = useMemo(() =>
+    baseCarriers.filter(c => !tierFilter || c.tier === tierFilter),
+    [tierFilter],
+  )
 
-  const tierCounts = {
-    'Top Performer': CARRIER_PERFORMANCE.filter(c => c.tier === 'Top Performer').length,
-    'Good':          CARRIER_PERFORMANCE.filter(c => c.tier === 'Good').length,
-    'Monitor':       CARRIER_PERFORMANCE.filter(c => c.tier === 'Monitor').length,
-    'At Risk':       CARRIER_PERFORMANCE.filter(c => c.tier === 'At Risk').length,
-  }
+  const tierCounts = useMemo(() => ({
+    'Top Performer': baseCarriers.filter(c => c.tier === 'Top Performer').length,
+    'Good':          baseCarriers.filter(c => c.tier === 'Good').length,
+    'Monitor':       baseCarriers.filter(c => c.tier === 'Monitor').length,
+    'At Risk':       baseCarriers.filter(c => c.tier === 'At Risk').length,
+  }), [])
 
   return (
     <div className="rounded-xl border border-slate-200 bg-white overflow-hidden">
@@ -78,7 +86,7 @@ export function CarrierPerformance() {
       </div>
 
       {view === 'cards' ? (
-        <div className="divide-y divide-slate-50">
+        <div className="divide-y divide-slate-50 max-h-96 overflow-y-auto">
           {/* Column headers */}
           <div className="grid grid-cols-12 gap-2 bg-slate-50 px-5 py-2 text-xxs font-semibold uppercase tracking-wide text-slate-400">
             <div className="col-span-4">Carrier</div>

@@ -1,6 +1,7 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { MapPin, Truck, AlertTriangle, TrendingUp } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { useFilters } from '@/context/FilterContext'
 import { NETWORK_NODES, REGION_SUMMARY, type NetworkNode } from '../mock/data'
 
 const REGION_COLORS = {
@@ -25,7 +26,15 @@ const NODE_POSITIONS: Record<string, { x: number; y: number }> = {
 
 export function LiveNetworkView() {
   const [selected, setSelected] = useState<NetworkNode | null>(null)
-  const [filter, setFilter] = useState<'all' | 'north' | 'south' | 'east' | 'west'>('all')
+  const { filters } = useFilters()
+  const [filter, setFilter] = useState<'all' | 'north' | 'south' | 'east' | 'west'>(
+    (filters.region as 'north' | 'south' | 'east' | 'west') || 'all',
+  )
+
+  useEffect(() => {
+    setFilter((filters.region as 'north' | 'south' | 'east' | 'west') || 'all')
+    setSelected(null)
+  }, [filters.region])
 
   const totalVehicles   = NETWORK_NODES.reduce((s, n) => s + n.activeVehicles, 0)
   const totalExceptions = NETWORK_NODES.reduce((s, n) => s + n.exceptions, 0)

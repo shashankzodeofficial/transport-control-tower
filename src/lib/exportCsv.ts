@@ -34,6 +34,18 @@ export function cityRegion(city: string): string {
   return ''
 }
 
+// Maps a routeCode prefix (e.g. "DEL-MUM-01") to its origin region.
+export function routeOriginRegion(routeCode: string): string {
+  const origin = routeCode.split('-')[0].toUpperCase()
+  const MAP: Record<string, string> = {
+    DEL: 'north', LKO: 'north', JAI: 'north', CHD: 'north',
+    MUM: 'west',  PUN: 'west',  AMD: 'west',  SUR: 'west',
+    BLR: 'south', HYD: 'south', CHE: 'south', KOC: 'south',
+    KOL: 'east',  PAT: 'east',  BHU: 'east',  GUW: 'east',
+  }
+  return MAP[origin] ?? ''
+}
+
 export function matchesRegion(text: string, region: string): boolean {
   if (!region) return true
   return cityRegion(text) === region.toLowerCase()
