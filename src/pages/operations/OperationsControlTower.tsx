@@ -1,10 +1,12 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useMemo } from 'react'
 import {
   Truck, AlertTriangle, Clock, CheckCircle2, Pause,
   RefreshCw, ChevronRight, Zap, MapPin, Fuel,
   Activity, ArrowRight,
 } from 'lucide-react'
 import { cn, timeAgo } from '@/lib/utils'
+import { matchesDateRange } from '@/lib/exportCsv'
+import { useFilters } from '@/context/FilterContext'
 import { KPICard } from '@/components/kpi/KPICard'
 import { TabStrip } from '@/layout/TabStrip'
 import {
@@ -25,6 +27,28 @@ function useLastRefresh() {
     return () => clearInterval(id)
   }, [])
   return ts
+}
+
+// Map city names / hub prefixes → region slugs (same regions as Executive CT)
+const CITY_REGION: Record<string, string> = {
+  Mumbai: 'west', Pune: 'west', Ahmedabad: 'west', Surat: 'west', Goa: 'west',
+  Delhi: 'north', Agra: 'north', Jaipur: 'north', Jodhpur: 'north', Lucknow: 'north', Indore: 'north', Bhopal: 'north',
+  Bangalore: 'south', Chennai: 'south', Hyderabad: 'south', Vizag: 'south',
+  Kolkata: 'east', Patna: 'east', Bhubaneswar: 'east',
+}
+
+function vehicleRegion(v: FleetVehicle): string {
+  return CITY_REGION[v.origin] ?? ''
+}
+
+function slaRegion(origin: string): string {
+  return CITY_REGION[origin] ?? ''
+}
+
+function hubRegion(hub: string): string {
+  // hub field is like "Mumbai Hub", "Delhi Hub"
+  const city = hub.replace(' Hub', '').trim()
+  return CITY_REGION[city] ?? ''
 }
 
 // ─── Status config ─────────────────────────────────────────────────────────────
@@ -201,7 +225,7 @@ function VehicleDetail({ v }: { v: FleetVehicle }) {
 
 // ─── SLA Watch Table ───────────────────────────────────────────────────────────
 
-function SLAWatchTable() {
+function SLAWatchTable({ records }: { records: typeof SLA_WATCH }) {
   return (
     <div className="rounded-xl border border-slate-200 bg-white overflow-hidden">
       <div className="px-4 py-3 border-b border-slate-100 flex items-center justify-between">
@@ -209,7 +233,7 @@ function SLAWatchTable() {
           <Clock size={14} className="text-amber-500" />
           SLA Watch List
         </h2>
-        <span className="text-xxs text-slate-400">{SLA_WATCH.length} records</span>
+        <span className="text-xxs text-slate-400">{records.length} records</span>
       </div>
       <div className="overflow-x-auto">
         <table className="w-full text-xs">
@@ -223,7 +247,7 @@ function SLAWatchTable() {
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-50">
-            {SLA_WATCH.map(r => (
+            {records.map(r => (
               <tr key={r.dispatchId} className="hover:bg-slate-50 transition-colors">
                 <td className="px-4 py-3 font-mono font-semibold text-slate-900">{r.dispatchId}</td>
                 <td className="px-4 py-3 text-slate-600">{r.routeCode}</td>
@@ -259,9 +283,9 @@ function SLAWatchTable() {
 
 // ─── Hub Activity ──────────────────────────────────────────────────────────────
 
-function HubActivity() {
+function HubActivity({ events }: { events: typeof HUB_EVENTS }) {
   const [filter, setFilter] = useState<'all' | 'arrival' | 'departure'>('all')
-  const visible = HUB_EVENTS.filter(e => filter === 'all' || e.type === filter)
+  const visible = events.filter(e => filter === 'all' || e.type === filter)
 
   return (
     <div className="rounded-xl border border-slate-200 bg-white overflow-hidden">
@@ -339,18 +363,76 @@ export function OperationsControlTower() {
   const [fleetTab, setFleetTab] = useState('all')
   const [selectedVehicle, setSelectedVehicle] = useState<FleetVehicle | null>(null)
 
+  const { filters } = useFilters()
+  const { region, dateRange } = filters
+
+  // Debug log — fires on every filter change
+  useEffect(() => {
+    console.log('[OperationsCT] filters updated', {
+      region:   region || '(all)',
+      dateFrom: dateRange.from?.toISOString(),
+      dateTo:   dateRange.to?.toISOString(),
+      preset:   dateRange.preset,
+    })
+  }, [region, dateRange])
+
+  // Filter fleet vehicles by region (no date field on vehicle; live ops show current vehicles)
+  const baseVehicles = useMemo(() => {
+    return region
+      ? FLEET_VEHICLES.filter(v => vehicleRegion(v) === region)
+      : FLEET_VEHICLES
+  }, [region, dateRange])
+
+  // Filter SLA records by region and planned arrival date
+  const filteredSLA = useMemo(() => {
+    return SLA_WATCH.filter(r => {
+      if (region && slaRegion(r.origin) !== region) return false
+      if (dateRange.from && dateRange.to && !matchesDateRange(r.plannedArrival, dateRange.from, dateRange.to)) return false
+      return true
+    })
+  }, [region, dateRange])
+
+  // Filter hub events by region and scheduled time
+  const filteredHubEvents = useMemo(() => {
+    return HUB_EVENTS.filter(e => {
+      if (region && hubRegion(e.hub) !== region) return false
+      if (dateRange.from && dateRange.to && !matchesDateRange(e.scheduledAt, dateRange.from, dateRange.to)) return false
+      return true
+    })
+  }, [region, dateRange])
+
+  // Recompute KPI strip from filtered data
+  const filteredKPI = useMemo(() => {
+    const active   = baseVehicles.filter(v => v.status !== 'arrived').length
+    const inTransit = baseVehicles.filter(v => v.status === 'in-transit').length
+    const delayed  = baseVehicles.filter(v => v.status === 'delayed').length
+    const slaAtRisk = filteredSLA.length
+    const hubArrivals = filteredHubEvents.filter(e => e.type === 'arrival').length
+    const utilPct = baseVehicles.length
+      ? Math.round((active / baseVehicles.length) * 100)
+      : 0
+    return [
+      { ...OPS_KPI[0], value: active },
+      { ...OPS_KPI[1], value: inTransit },
+      { ...OPS_KPI[2], value: delayed, status: delayed > 3 ? 'danger' as const : 'warning' as const },
+      { ...OPS_KPI[3], value: slaAtRisk, status: slaAtRisk > 2 ? 'warning' as const : 'healthy' as const },
+      { ...OPS_KPI[4], value: hubArrivals },
+      { ...OPS_KPI[5], value: utilPct, progress: utilPct },
+    ]
+  }, [baseVehicles, filteredSLA, filteredHubEvents])
+
   function handleRefresh() {
     setRefreshing(true)
     setTimeout(() => setRefreshing(false), 800)
   }
 
-  const filteredVehicles = filterVehicles(FLEET_VEHICLES, fleetTab)
+  const filteredVehicles = filterVehicles(baseVehicles, fleetTab)
   const counts = {
-    all:        FLEET_VEHICLES.length,
-    'in-transit': FLEET_VEHICLES.filter(v => v.status === 'in-transit').length,
-    delayed:    FLEET_VEHICLES.filter(v => v.status === 'delayed').length,
-    halted:     FLEET_VEHICLES.filter(v => v.status === 'halted').length,
-    arrived:    FLEET_VEHICLES.filter(v => v.status === 'arrived').length,
+    all:          baseVehicles.length,
+    'in-transit': baseVehicles.filter(v => v.status === 'in-transit').length,
+    delayed:      baseVehicles.filter(v => v.status === 'delayed').length,
+    halted:       baseVehicles.filter(v => v.status === 'halted').length,
+    arrived:      baseVehicles.filter(v => v.status === 'arrived').length,
   }
 
   return (
@@ -381,15 +463,15 @@ export function OperationsControlTower() {
       <div className="flex-1 overflow-auto p-6 space-y-6">
         {/* KPI Strip */}
         <div className="grid grid-cols-6 gap-4">
-          {OPS_KPI.map(k => (
+          {filteredKPI.map(k => (
             <KPICard key={k.label} data={k as any} />
           ))}
         </div>
 
         {/* SLA Watch + Hub Activity */}
         <div className="grid grid-cols-2 gap-6">
-          <SLAWatchTable />
-          <HubActivity />
+          <SLAWatchTable records={filteredSLA} />
+          <HubActivity events={filteredHubEvents} />
         </div>
 
         {/* Fleet Board */}
@@ -400,7 +482,7 @@ export function OperationsControlTower() {
                 <Truck size={14} className="text-blue-600" />
                 Live Fleet Board
               </h2>
-              <span className="text-xxs text-slate-400">{FLEET_VEHICLES.length} vehicles tracked</span>
+              <span className="text-xxs text-slate-400">{baseVehicles.length} vehicles tracked{region ? ` · ${region}` : ''}</span>
             </div>
             <TabStrip
               tabs={FLEET_TABS.map(t => ({

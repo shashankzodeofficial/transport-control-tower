@@ -32,28 +32,59 @@ export function ControlTowerPage() {
   const lastRefresh = useLastRefresh()
   const [refreshing, setRefreshing] = useState(false)
   const { filters } = useFilters()
-  const { region } = filters
+  const { region, dateRange } = filters
+
+  // Debug log: fires on every filter change
+  useEffect(() => {
+    console.log('[ExecutiveCT] filters updated', {
+      region: region || '(all)',
+      dateFrom: dateRange.from?.toISOString(),
+      dateTo:   dateRange.to?.toISOString(),
+      preset:   dateRange.preset,
+    })
+  }, [region, dateRange])
+
+  // Date range scale factor: 7d baseline = 1.0
+  const dateScale = useMemo(() => {
+    if (!dateRange.from || !dateRange.to) return 1
+    const days = Math.max(1, (dateRange.to.getTime() - dateRange.from.getTime()) / 86400000)
+    return Math.round((days / 7) * 100) / 100
+  }, [dateRange])
 
   const kpiData = useMemo((): KPIData[] => {
-    if (!region) return KPI_DATA
+    if (!region) {
+      // Apply date scale to all count metrics
+      return [
+        { ...KPI_DATA[0], value: Math.round(Number(KPI_DATA[0].value) * dateScale) },
+        { ...KPI_DATA[1] },
+        { ...KPI_DATA[2], value: Math.round(Number(KPI_DATA[2].value) * dateScale) },
+        { ...KPI_DATA[3], value: Math.round(Number(KPI_DATA[3].value) * dateScale) },
+        { ...KPI_DATA[4] },
+        { ...KPI_DATA[5] },
+        { ...KPI_DATA[6] },
+        { ...KPI_DATA[7], value: Math.round(Number(KPI_DATA[7].value) * dateScale) },
+      ]
+    }
     const r = REGION_SUMMARY.find(rs => rs.region.toLowerCase() === region)
     if (!r) return KPI_DATA
     const nodes = NETWORK_NODES.filter(n => n.region === region)
     const avgUtil = nodes.length
       ? Math.round(nodes.reduce((s, n) => s + n.utilPct, 0) / nodes.length)
       : 79
-    const slaBreaches = Math.max(1, Math.round(r.dispatches * (100 - r.onTime) / 100 * 0.3))
+    const dispatches  = Math.round(r.dispatches  * dateScale)
+    const exceptions  = Math.round(r.exceptions  * dateScale)
+    const slaBreaches = Math.max(1, Math.round(dispatches * (100 - r.onTime) / 100 * 0.3))
     return [
-      { ...KPI_DATA[0], value: r.dispatches },
+      { ...KPI_DATA[0], value: dispatches },
       { ...KPI_DATA[1], value: r.onTime, status: r.onTime >= 90 ? 'healthy' : r.onTime >= 80 ? 'warning' : 'danger', progress: r.onTime },
       { ...KPI_DATA[2], value: slaBreaches },
-      { ...KPI_DATA[3], value: r.exceptions, progress: Math.round(r.exceptions / 37 * 100) },
+      { ...KPI_DATA[3], value: exceptions, progress: Math.round(exceptions / 37 * 100) },
       { ...KPI_DATA[4], value: avgUtil, progress: avgUtil },
       { ...KPI_DATA[5], value: r.onTime >= 90 ? '1.8' : r.onTime >= 85 ? '2.4' : '3.2' },
       { ...KPI_DATA[6] },
-      { ...KPI_DATA[7], value: Math.round(r.dispatches * 0.12) },
+      { ...KPI_DATA[7], value: Math.round(dispatches * 0.12) },
     ]
-  }, [region])
+  }, [region, dateRange, dateScale])
 
   function handleRefresh() {
     setRefreshing(true)

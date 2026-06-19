@@ -22,13 +22,13 @@ export function CarrierPerformance() {
   const [view, setView] = useState<'cards' | 'chart'>('cards')
   const [tierFilter, setTierFilter] = useState<string | null>(null)
   const { filters } = useFilters()
-  const { region } = filters
+  const { region, dateRange } = filters
 
   // Carriers don't have a direct origin — filter by tier and show region label in header
   const baseCarriers = CARRIER_PERFORMANCE
   const filtered = useMemo(() =>
     baseCarriers.filter(c => !tierFilter || c.tier === tierFilter),
-    [tierFilter],
+    [tierFilter, region, dateRange],
   )
 
   const tierCounts = useMemo(() => ({

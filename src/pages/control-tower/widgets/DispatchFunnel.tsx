@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useMemo } from 'react'
 import { cn } from '@/lib/utils'
 import { useFilters } from '@/context/FilterContext'
 import { BarChart } from '@/components/charts/BarChart'
@@ -6,15 +6,21 @@ import { DISPATCH_FUNNEL, DISPATCH_TREND, REGION_SUMMARY } from '../mock/data'
 
 export function DispatchFunnel() {
   const { filters } = useFilters()
-  const { region } = filters
+  const { region, dateRange } = filters
 
-  const regionData = region ? REGION_SUMMARY.find(r => r.region.toLowerCase() === region) : null
-  const scale = regionData ? regionData.dispatches / DISPATCH_FUNNEL[0].count : 1
-  const displayFunnel = regionData
-    ? DISPATCH_FUNNEL.map(s => ({ ...s, count: Math.max(1, Math.round(s.count * scale)) }))
-    : DISPATCH_FUNNEL
-
-  const max = displayFunnel[0].count
+  const displayFunnel = useMemo(() => {
+    const regionData = region ? REGION_SUMMARY.find(r => r.region.toLowerCase() === region) : null
+    const regionScale = regionData ? regionData.dispatches / DISPATCH_FUNNEL[0].count : 1
+    // Apply date range scale (7d baseline)
+    const days = dateRange.from && dateRange.to
+      ? Math.max(1, (dateRange.to.getTime() - dateRange.from.getTime()) / 86400000)
+      : 7
+    const dateScale = Math.round((days / 7) * 100) / 100
+    const scale = regionScale * dateScale
+    return regionData || scale !== 1
+      ? DISPATCH_FUNNEL.map(s => ({ ...s, count: Math.max(1, Math.round(s.count * scale)) }))
+      : DISPATCH_FUNNEL
+  }, [region, dateRange])
 
   return (
     <div className="rounded-xl border border-slate-200 bg-white overflow-hidden">

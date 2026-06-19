@@ -21,7 +21,7 @@ export function RoutePerformance() {
   const [sortDir, setSortDir]   = useState<'asc' | 'desc'>('desc')
   const [gradeFilter, setGradeFilter] = useState<string | null>(null)
   const { filters } = useFilters()
-  const { region } = filters
+  const { region, dateRange } = filters
 
   function handleSort(key: SortKey) {
     if (sortKey === key) setSortDir(d => d === 'asc' ? 'desc' : 'asc')
@@ -32,7 +32,7 @@ export function RoutePerformance() {
     region
       ? ROUTE_PERFORMANCE.filter(r => routeOriginRegion(r.routeCode) === region)
       : ROUTE_PERFORMANCE,
-    [region],
+    [region, dateRange],
   )
 
   const gradeDistribution = useMemo(() => {
