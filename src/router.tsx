@@ -19,6 +19,7 @@ import { AlertsCenter }             from '@/pages/alerts'
 import { AnalyticsDashboard }       from '@/pages/analytics'
 import { MasterDataDashboard }      from '@/pages/master-data'
 import { ProfilePage }              from '@/pages/profile/ProfilePage'
+import { HubOperations }            from '@/pages/hub-ops'
 
 // Placeholder for unbuilt screens
 function ComingSoon({ label }: { label: string }) {
@@ -99,6 +100,10 @@ export function AppRouter() {
         <Route path="/master-data/hubs"         element={<MasterDataDashboard />} />
         <Route path="/master-data/customers"    element={<MasterDataDashboard />} />
         <Route path="/master-data/sla-matrix"   element={<MasterDataDashboard />} />
+
+        {/* Hub Operations */}
+        <Route path="/hub-ops"           element={<HubOperations />} />
+        <Route path="/hub-ops/*"         element={<HubOperations />} />
 
         {/* Profile */}
         <Route path="/profile"           element={<ProfilePage />} />

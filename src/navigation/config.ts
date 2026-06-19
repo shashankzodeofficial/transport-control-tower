@@ -16,6 +16,7 @@ export const NAV_CONFIG: NavGroupDef[] = [
       { key: 'dispatch',     label: 'Dispatch Mgmt',     icon: 'PackageCheck',    path: '/dispatch',      permission: 'dispatch.view' },
       { key: 'transport',    label: 'Transport Exec',    icon: 'Truck',           path: '/transport',     permission: 'transport.view' },
       { key: 'planning',     label: 'Load Planning',     icon: 'Route',           path: '/load-planning', permission: 'planning.view' },
+      { key: 'hub-ops',     label: 'Hub Operations',    icon: 'Warehouse',       path: '/hub-ops',       permission: 'dispatch.view' },
     ],
   },
   {
