@@ -5,6 +5,8 @@ import {
   Calendar, RefreshCw, ChevronDown,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { useFilters } from '@/context/FilterContext'
+import type { DateRangePreset } from '@/types'
 import { ExecutiveAnalytics }      from './tabs/ExecutiveAnalytics'
 import { OperationsAnalytics }     from './tabs/OperationsAnalytics'
 import { CarrierAnalytics }        from './tabs/CarrierAnalytics'
@@ -31,13 +33,20 @@ function activeTabFromPath(pathname: string): TabKey {
   return found ? found.key : 'executive'
 }
 
-// ─── Date range filter (display only — mock, no data-binding) ─────────────────
+// ─── Date range selector — synced with global FilterContext ───────────────────
 
-const DATE_RANGES = ['Today', 'Last 7 Days', 'Last 30 Days', 'This Month', 'Last Month', 'Custom']
+const PRESET_OPTIONS: { label: string; value: DateRangePreset }[] = [
+  { label: 'Today',        value: 'today'     },
+  { label: 'Yesterday',    value: 'yesterday' },
+  { label: 'Last 7 Days',  value: '7d'        },
+  { label: 'Last 30 Days', value: '30d'       },
+  { label: 'This Month',   value: 'month'     },
+]
 
 function DateRangeSelector() {
-  const [selected, setSelected] = useState('Last 30 Days')
+  const { filters, setDatePreset } = useFilters()
   const [open, setOpen] = useState(false)
+  const current = PRESET_OPTIONS.find(o => o.value === filters.dateRange.preset)?.label ?? 'Last 7 Days'
   return (
     <div className="relative">
       <button
@@ -45,21 +54,21 @@ function DateRangeSelector() {
         className="flex h-8 items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 text-xs font-medium text-slate-600 hover:bg-slate-50 transition-colors"
       >
         <Calendar size={13} className="text-slate-400" />
-        {selected}
+        {current}
         <ChevronDown size={12} className={cn('text-slate-400 transition-transform', open && 'rotate-180')} />
       </button>
       {open && (
         <div className="absolute right-0 top-full mt-1 z-30 w-40 rounded-xl border border-slate-200 bg-white shadow-lg overflow-hidden">
-          {DATE_RANGES.map(r => (
+          {PRESET_OPTIONS.map(r => (
             <button
-              key={r}
-              onClick={() => { setSelected(r); setOpen(false) }}
+              key={r.value}
+              onClick={() => { setDatePreset(r.value); setOpen(false) }}
               className={cn(
                 'w-full text-left px-3 py-2 text-xs transition-colors',
-                selected === r ? 'bg-blue-50 text-blue-700 font-semibold' : 'text-slate-600 hover:bg-slate-50',
+                filters.dateRange.preset === r.value ? 'bg-blue-50 text-blue-700 font-semibold' : 'text-slate-600 hover:bg-slate-50',
               )}
             >
-              {r}
+              {r.label}
             </button>
           ))}
         </div>
@@ -102,7 +111,17 @@ export function AnalyticsDashboard() {
   const location = useLocation()
   const navigate = useNavigate()
   const [refreshing, setRefreshing] = useState(false)
-  const [region, setRegion] = useState('All Regions')
+  const { filters, setRegion: setGlobalRegion } = useFilters()
+
+  // Map global lowercase region slug → display label
+  const regionLabel = filters.region
+    ? filters.region.charAt(0).toUpperCase() + filters.region.slice(1)
+    : 'All Regions'
+
+  // Translate FilterPills label → global region slug
+  function handleRegionChange(label: string) {
+    setGlobalRegion(label === 'All Regions' ? '' : label.toLowerCase())
+  }
 
   const activeTab = activeTabFromPath(location.pathname)
 
@@ -166,7 +185,7 @@ export function AnalyticsDashboard() {
 
         {/* Filter bar */}
         <div className="flex items-center gap-4 px-6 py-2.5 bg-slate-50 border-t border-slate-100">
-          <FilterPills label="Region" options={REGIONS} value={region} onChange={setRegion} />
+          <FilterPills label="Region" options={REGIONS} value={regionLabel} onChange={handleRegionChange} />
         </div>
       </div>
 

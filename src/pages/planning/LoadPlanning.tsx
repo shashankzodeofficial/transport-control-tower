@@ -11,6 +11,7 @@ import {
   VEHICLES, PENDING_LOADS, LOAD_PLANS, PLANNING_KPI, CAPACITY_BY_TYPE,
 } from './mock/data'
 import type { AvailableVehicle, PendingLoad } from './mock/data'
+import { useActiveFilters } from '@/hooks/useActiveFilters'
 
 // ─── Availability config ──────────────────────────────────────────────────────
 
@@ -275,9 +276,46 @@ export function LoadPlanning() {
   const [avFilter, setAvFilter] = useState<string>('all')
   const [showNewModal, setShowNewModal] = useState(false)
 
+  const { region, dateRange, matchesRoute, matchesCity, matchesDate } = useActiveFilters('LoadPlanning')
+
+  // Base load list filtered by global region + date
+  const baseLoads = useMemo(() =>
+    PENDING_LOADS.filter(l =>
+      matchesRoute(l.routeCode) && matchesDate(l.plannedDeparture)
+    ),
+    [region, dateRange],
+  )
+
+  // Base vehicle list filtered by global region (vehicles have a city location)
+  const baseVehicles = useMemo(() =>
+    region ? VEHICLES.filter(v => matchesCity(v.location)) : VEHICLES,
+    [region, dateRange],
+  )
+
+  // Base plans filtered by global region + date
+  const basePlans = useMemo(() =>
+    LOAD_PLANS.filter(p =>
+      matchesRoute(p.routeCode) && matchesDate(p.plannedDeparture)
+    ),
+    [region, dateRange],
+  )
+
+  // KPI values derived from filtered data
+  const kpiValues = useMemo(() => {
+    const available     = baseVehicles.filter(v => v.availability === 'available').length
+    const inMaintenance = baseVehicles.filter(v => v.availability === 'maintenance').length
+    const pendingLoads  = baseLoads.filter(l => !l.assignedVehicleId).length
+    const criticalLoads = baseLoads.filter(l => l.priority === 'critical').length
+    const plansToday    = basePlans.filter(p => p.status !== 'cancelled').length
+    const avgUtil       = baseVehicles.length
+      ? Math.round(baseVehicles.reduce((s, v) => s + v.utilizationPct, 0) / baseVehicles.length)
+      : PLANNING_KPI.avgUtilization
+    return { available, pendingLoads, criticalLoads, avgUtil, inMaintenance, plansToday }
+  }, [baseLoads, baseVehicles, basePlans])
+
   const filteredLoads = useMemo(() => {
     const q = search.toLowerCase()
-    return PENDING_LOADS.filter(l =>
+    return baseLoads.filter(l =>
       !q ||
       l.id.toLowerCase().includes(q) ||
       l.routeCode.toLowerCase().includes(q) ||
@@ -288,11 +326,12 @@ export function LoadPlanning() {
       const p = { critical: 0, high: 1, normal: 2 }
       return (p[a.priority] - p[b.priority]) || (new Date(a.plannedDeparture).getTime() - new Date(b.plannedDeparture).getTime())
     })
-  }, [search])
+  }, [baseLoads, search])
 
-  const filteredVehicles = useMemo(() => {
-    return avFilter === 'all' ? VEHICLES : VEHICLES.filter(v => v.availability === avFilter)
-  }, [avFilter])
+  const filteredVehicles = useMemo(() =>
+    avFilter === 'all' ? baseVehicles : baseVehicles.filter(v => v.availability === avFilter),
+    [baseVehicles, avFilter],
+  )
 
   const capData = CAPACITY_BY_TYPE.map(c => ({ type: c.type, Available: c.available, 'In Use': c.total - c.available }))
 
@@ -314,12 +353,12 @@ export function LoadPlanning() {
       {/* KPI strip */}
       <div className="grid grid-cols-6 gap-3 border-b border-slate-200 bg-white px-6 py-4">
         {[
-          { label: 'Available Vehicles', value: PLANNING_KPI.available,     style: 'text-green-600'  },
-          { label: 'Pending Loads',      value: PLANNING_KPI.pendingLoads,  style: 'text-amber-600'  },
-          { label: 'Critical Loads',     value: PLANNING_KPI.criticalLoads, style: 'text-red-600'    },
-          { label: 'Avg Utilization',    value: `${PLANNING_KPI.avgUtilization}%`, style: 'text-blue-600' },
-          { label: 'In Maintenance',     value: PLANNING_KPI.inMaintenance, style: 'text-amber-600'  },
-          { label: 'Plans Today',        value: PLANNING_KPI.plansToday,    style: 'text-slate-700'  },
+          { label: 'Available Vehicles', value: kpiValues.available,            style: 'text-green-600'  },
+          { label: 'Pending Loads',      value: kpiValues.pendingLoads,         style: 'text-amber-600'  },
+          { label: 'Critical Loads',     value: kpiValues.criticalLoads,        style: 'text-red-600'    },
+          { label: 'Avg Utilization',    value: `${kpiValues.avgUtil}%`,        style: 'text-blue-600'   },
+          { label: 'In Maintenance',     value: kpiValues.inMaintenance,        style: 'text-amber-600'  },
+          { label: 'Plans Today',        value: kpiValues.plansToday,           style: 'text-slate-700'  },
         ].map(k => (
           <div key={k.label} className="rounded-xl border border-slate-100 bg-slate-50 px-4 py-3">
             <p className="text-xxs font-semibold uppercase tracking-wide text-slate-400 mb-1">{k.label}</p>
@@ -332,9 +371,9 @@ export function LoadPlanning() {
       <TabStrip
         tabs={TABS.map(t => ({
           ...t,
-          badge: t.key === 'loads' ? PENDING_LOADS.filter(l=>!l.assignedVehicleId).length :
-                 t.key === 'vehicles' ? VEHICLES.length :
-                 LOAD_PLANS.length,
+          badge: t.key === 'loads' ? baseLoads.filter(l=>!l.assignedVehicleId).length :
+                 t.key === 'vehicles' ? baseVehicles.length :
+                 basePlans.length,
         }))}
         activeTab={tab}
         onChange={setTab}

@@ -1,8 +1,7 @@
 import React, { useState, useMemo } from 'react'
 import { ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { useFilters } from '@/context/FilterContext'
-import { routeOriginRegion } from '@/lib/exportCsv'
+import { useActiveFilters } from '@/hooks/useActiveFilters'
 import { GradeBadge } from '@/components/badges/GradeBadge'
 import { TrendBadge } from '@/components/badges/TrendBadge'
 import { SparklineChart } from '@/components/charts/SparklineChart'
@@ -20,8 +19,7 @@ export function RoutePerformance() {
   const [sortKey, setSortKey]   = useState<SortKey>('otdPct')
   const [sortDir, setSortDir]   = useState<'asc' | 'desc'>('desc')
   const [gradeFilter, setGradeFilter] = useState<string | null>(null)
-  const { filters } = useFilters()
-  const { region, dateRange } = filters
+  const { region, dateRange, matchesRoute } = useActiveFilters('CT-RoutePerf')
 
   function handleSort(key: SortKey) {
     if (sortKey === key) setSortDir(d => d === 'asc' ? 'desc' : 'asc')
@@ -29,9 +27,7 @@ export function RoutePerformance() {
   }
 
   const baseRoutes = useMemo(() =>
-    region
-      ? ROUTE_PERFORMANCE.filter(r => routeOriginRegion(r.routeCode) === region)
-      : ROUTE_PERFORMANCE,
+    region ? ROUTE_PERFORMANCE.filter(r => matchesRoute(r.routeCode)) : ROUTE_PERFORMANCE,
     [region, dateRange],
   )
 

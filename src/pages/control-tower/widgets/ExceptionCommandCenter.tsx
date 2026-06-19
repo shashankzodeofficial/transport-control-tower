@@ -1,8 +1,7 @@
 import React, { useState, useMemo } from 'react'
 import { AlertTriangle, Clock, User, ChevronRight, TrendingUp } from 'lucide-react'
 import { cn, timeAgo } from '@/lib/utils'
-import { useFilters } from '@/context/FilterContext'
-import { routeOriginRegion, matchesDateRange } from '@/lib/exportCsv'
+import { useActiveFilters } from '@/hooks/useActiveFilters'
 import { SeverityBadge } from '@/components/badges/SeverityBadge'
 import { DonutChart } from '@/components/charts/DonutChart'
 import { LineChart } from '@/components/charts/LineChart'
@@ -18,15 +17,12 @@ const STATUS_STYLES: Record<string, string> = {
 
 export function ExceptionCommandCenter() {
   const [activeTab, setActiveTab] = useState<'live' | 'trend'>('live')
-  const { filters } = useFilters()
-  const { region, dateRange } = filters
+  const { region, dateRange, matchesRoute, matchesDate } = useActiveFilters('CT-ExceptionCC')
 
   const liveExceptions = useMemo(() =>
-    LIVE_EXCEPTIONS.filter(ex => {
-      if (region && routeOriginRegion(ex.routeCode) !== region) return false
-      if (!matchesDateRange(ex.raisedAt, dateRange.from, dateRange.to)) return false
-      return true
-    }),
+    LIVE_EXCEPTIONS.filter(ex =>
+      matchesRoute(ex.routeCode) && matchesDate(ex.raisedAt)
+    ),
     [region, dateRange],
   )
 

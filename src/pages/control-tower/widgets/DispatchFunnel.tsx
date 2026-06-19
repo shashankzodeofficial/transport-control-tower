@@ -1,12 +1,11 @@
 import React, { useMemo } from 'react'
 import { cn } from '@/lib/utils'
-import { useFilters } from '@/context/FilterContext'
+import { useActiveFilters } from '@/hooks/useActiveFilters'
 import { BarChart } from '@/components/charts/BarChart'
 import { DISPATCH_FUNNEL, DISPATCH_TREND, REGION_SUMMARY } from '../mock/data'
 
 export function DispatchFunnel() {
-  const { filters } = useFilters()
-  const { region, dateRange } = filters
+  const { region, dateRange } = useActiveFilters('CT-DispatchFunnel')
 
   const displayFunnel = useMemo(() => {
     const regionData = region ? REGION_SUMMARY.find(r => r.region.toLowerCase() === region) : null

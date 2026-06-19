@@ -5,8 +5,7 @@ import {
   Shield, Activity, Clock, BarChart2,
 } from 'lucide-react'
 import { cn, timeAgo } from '@/lib/utils'
-import { useFilters } from '@/context/FilterContext'
-import { cityRegion } from '@/lib/exportCsv'
+import { useActiveFilters } from '@/hooks/useActiveFilters'
 import { LineChart }   from '@/components/charts/LineChart'
 import { BarChart }    from '@/components/charts/BarChart'
 import { DonutChart }  from '@/components/charts/DonutChart'
@@ -307,12 +306,11 @@ export function CarrierPerformance() {
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [showCharts, setShowCharts] = useState(true)
 
-  const { filters } = useFilters()
-  const { region, dateRange } = filters
+  const { region, dateRange, matchesCity } = useActiveFilters('CarrierPerformance')
 
   // Base list filtered by global region (hqCity mapped to region)
   const baseList = useMemo(() =>
-    region ? CARRIERS.filter(c => cityRegion(c.hqCity) === region) : CARRIERS,
+    region ? CARRIERS.filter(c => matchesCity(c.hqCity)) : CARRIERS,
     [region, dateRange],
   )
 

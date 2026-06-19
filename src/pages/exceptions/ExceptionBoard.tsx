@@ -5,8 +5,8 @@ import {
   Zap, X, RefreshCw, Download, CircleDot, Plus,
 } from 'lucide-react'
 import { cn, timeAgo } from '@/lib/utils'
-import { exportCsv, cityRegion, matchesDateRange } from '@/lib/exportCsv'
-import { useFilters } from '@/context/FilterContext'
+import { exportCsv } from '@/lib/exportCsv'
+import { useActiveFilters } from '@/hooks/useActiveFilters'
 import { SeverityBadge } from '@/components/badges/SeverityBadge'
 import { KPICard }       from '@/components/kpi/KPICard'
 import { DonutChart }    from '@/components/charts/DonutChart'
@@ -366,16 +366,13 @@ export function ExceptionBoard() {
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [showCharts, setShowCharts] = useState(true)
   const [showRaiseModal, setShowRaiseModal] = useState(false)
-  const { filters } = useFilters()
-  const { region, dateRange } = filters
+  const { region, dateRange, matchesCity, matchesDate } = useActiveFilters('ExceptionBoard')
 
   // Apply global region + date filters first
   const globalFiltered = useMemo(() =>
-    EXCEPTIONS.filter(ex => {
-      if (region && cityRegion(ex.origin) !== region) return false
-      if (!matchesDateRange(ex.raisedAt, dateRange.from, dateRange.to)) return false
-      return true
-    }),
+    EXCEPTIONS.filter(ex =>
+      matchesCity(ex.origin) && matchesDate(ex.raisedAt)
+    ),
     [region, dateRange],
   )
 

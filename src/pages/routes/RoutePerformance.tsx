@@ -5,7 +5,7 @@ import {
   Clock, Package, DollarSign, Activity,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { useFilters } from '@/context/FilterContext'
+import { useActiveFilters } from '@/hooks/useActiveFilters'
 import { GradeBadge }  from '@/components/badges/GradeBadge'
 import { SparklineChart } from '@/components/charts/SparklineChart'
 import { BarChart }    from '@/components/charts/BarChart'
@@ -247,8 +247,7 @@ export function RoutePerformance() {
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [showCharts, setShowCharts] = useState(true)
 
-  const { filters } = useFilters()
-  const { region, dateRange } = filters
+  const { region, dateRange } = useActiveFilters('RoutePerformance')
 
   // Base list filtered by global region (regionOrigin field is 'North'/'South'/etc.)
   const baseList = useMemo(() =>

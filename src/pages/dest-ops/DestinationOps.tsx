@@ -6,8 +6,7 @@ import {
   TriangleAlert, PackageCheck, ScanLine, Loader2, Navigation,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { useFilters } from '@/context/FilterContext'
-import { routeOriginRegion, matchesDateRange } from '@/lib/exportCsv'
+import { useActiveFilters } from '@/hooks/useActiveFilters'
 import {
   DEST_VEHICLES, DEST_HUBS, CARRIERS_LIST, DOCK_NUMBERS,
   DEST_STATUS_ORDER, DEST_STATUS_LABEL,
@@ -529,8 +528,7 @@ export function DestinationOps() {
   const [showAddModal, setShowAddModal] = useState(false)
   const searchRef = useRef<HTMLInputElement>(null)
 
-  const { filters } = useFilters()
-  const { region, dateRange } = filters
+  const { region, dateRange, matchesRoute, matchesDate } = useActiveFilters('DestOps')
 
   // Ctrl+K or / to focus search
   useEffect(() => {
@@ -546,11 +544,9 @@ export function DestinationOps() {
 
   // Base vehicles after global region + date filter (routeCode origin = origin region)
   const baseVehicles = useMemo(() =>
-    vehicles.filter(v => {
-      if (region && routeOriginRegion(v.routeCode) !== region) return false
-      if (dateRange.from && dateRange.to && v.arrivedAt && !matchesDateRange(v.arrivedAt, dateRange.from, dateRange.to)) return false
-      return true
-    }),
+    vehicles.filter(v =>
+      matchesRoute(v.routeCode) && matchesDate(v.arrivedAt)
+    ),
     [vehicles, region, dateRange],
   )
 

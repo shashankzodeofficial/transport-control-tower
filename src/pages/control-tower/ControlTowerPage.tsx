@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react'
 import { RefreshCw, Download, Maximize2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { exportCsv } from '@/lib/exportCsv'
-import { useFilters } from '@/context/FilterContext'
+import { useActiveFilters } from '@/hooks/useActiveFilters'
 import { KPIStrip } from '@/components/kpi/KPIStrip'
 import { DispatchFunnel }          from './widgets/DispatchFunnel'
 import { LiveNetworkView }         from './widgets/LiveNetworkView'
@@ -31,18 +31,7 @@ function fmtTime(d: Date) {
 export function ControlTowerPage() {
   const lastRefresh = useLastRefresh()
   const [refreshing, setRefreshing] = useState(false)
-  const { filters } = useFilters()
-  const { region, dateRange } = filters
-
-  // Debug log: fires on every filter change
-  useEffect(() => {
-    console.log('[ExecutiveCT] filters updated', {
-      region: region || '(all)',
-      dateFrom: dateRange.from?.toISOString(),
-      dateTo:   dateRange.to?.toISOString(),
-      preset:   dateRange.preset,
-    })
-  }, [region, dateRange])
+  const { region, dateRange } = useActiveFilters('ExecutiveCT')
 
   // Date range scale factor: 7d baseline = 1.0
   const dateScale = useMemo(() => {

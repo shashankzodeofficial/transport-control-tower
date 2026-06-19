@@ -1,8 +1,7 @@
 import React, { useState, useMemo } from 'react'
 import { Bell, BellOff, CheckCheck, Filter } from 'lucide-react'
 import { cn, timeAgo } from '@/lib/utils'
-import { useFilters } from '@/context/FilterContext'
-import { routeOriginRegion, matchesDateRange } from '@/lib/exportCsv'
+import { useActiveFilters } from '@/hooks/useActiveFilters'
 import { CT_ALERTS } from '../mock/data'
 import type { Alert } from '@/types'
 
@@ -24,16 +23,13 @@ export function AlertCenter() {
   const [alerts, setAlerts] = useState<Alert[]>(CT_ALERTS)
   const [filter, setFilter] = useState<'all' | 'unread' | 'critical'>('all')
 
-  const { filters } = useFilters()
-  const { region, dateRange } = filters
+  const { region, dateRange, matchesRoute, matchesDate } = useActiveFilters('AlertCenter')
 
   // Apply global region + date filter before local severity/ack filter
   const regionDateFiltered = useMemo(() =>
-    alerts.filter(a => {
-      if (region && a.routeCode && routeOriginRegion(a.routeCode) !== region) return false
-      if (!matchesDateRange(a.firedAt, dateRange.from, dateRange.to)) return false
-      return true
-    }),
+    alerts.filter(a =>
+      (!a.routeCode || matchesRoute(a.routeCode)) && matchesDate(a.firedAt)
+    ),
     [alerts, region, dateRange],
   )
 

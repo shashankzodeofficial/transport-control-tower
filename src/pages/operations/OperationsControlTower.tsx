@@ -5,8 +5,7 @@ import {
   Activity, ArrowRight,
 } from 'lucide-react'
 import { cn, timeAgo } from '@/lib/utils'
-import { matchesDateRange } from '@/lib/exportCsv'
-import { useFilters } from '@/context/FilterContext'
+import { useActiveFilters } from '@/hooks/useActiveFilters'
 import { KPICard } from '@/components/kpi/KPICard'
 import { TabStrip } from '@/layout/TabStrip'
 import {
@@ -363,43 +362,31 @@ export function OperationsControlTower() {
   const [fleetTab, setFleetTab] = useState('all')
   const [selectedVehicle, setSelectedVehicle] = useState<FleetVehicle | null>(null)
 
-  const { filters } = useFilters()
-  const { region, dateRange } = filters
-
-  // Debug log — fires on every filter change
-  useEffect(() => {
-    console.log('[OperationsCT] filters updated', {
-      region:   region || '(all)',
-      dateFrom: dateRange.from?.toISOString(),
-      dateTo:   dateRange.to?.toISOString(),
-      preset:   dateRange.preset,
-    })
-  }, [region, dateRange])
+  const { region, dateRange, matchesDate } = useActiveFilters('OperationsCT')
 
   // Filter fleet vehicles by region (no date field on vehicle; live ops show current vehicles)
-  const baseVehicles = useMemo(() => {
-    return region
-      ? FLEET_VEHICLES.filter(v => vehicleRegion(v) === region)
-      : FLEET_VEHICLES
-  }, [region, dateRange])
+  const baseVehicles = useMemo(() =>
+    region ? FLEET_VEHICLES.filter(v => vehicleRegion(v) === region) : FLEET_VEHICLES,
+    [region, dateRange],
+  )
 
   // Filter SLA records by region and planned arrival date
-  const filteredSLA = useMemo(() => {
-    return SLA_WATCH.filter(r => {
+  const filteredSLA = useMemo(() =>
+    SLA_WATCH.filter(r => {
       if (region && slaRegion(r.origin) !== region) return false
-      if (dateRange.from && dateRange.to && !matchesDateRange(r.plannedArrival, dateRange.from, dateRange.to)) return false
-      return true
-    })
-  }, [region, dateRange])
+      return matchesDate(r.plannedArrival)
+    }),
+    [region, dateRange],
+  )
 
   // Filter hub events by region and scheduled time
-  const filteredHubEvents = useMemo(() => {
-    return HUB_EVENTS.filter(e => {
+  const filteredHubEvents = useMemo(() =>
+    HUB_EVENTS.filter(e => {
       if (region && hubRegion(e.hub) !== region) return false
-      if (dateRange.from && dateRange.to && !matchesDateRange(e.scheduledAt, dateRange.from, dateRange.to)) return false
-      return true
-    })
-  }, [region, dateRange])
+      return matchesDate(e.scheduledAt)
+    }),
+    [region, dateRange],
+  )
 
   // Recompute KPI strip from filtered data
   const filteredKPI = useMemo(() => {

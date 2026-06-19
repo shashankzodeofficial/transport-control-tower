@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react'
 import { Building2, Star } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { useFilters } from '@/context/FilterContext'
+import { useActiveFilters } from '@/hooks/useActiveFilters'
 import { TrendBadge } from '@/components/badges/TrendBadge'
 import { SparklineChart } from '@/components/charts/SparklineChart'
 import { BarChart } from '@/components/charts/BarChart'
@@ -21,8 +21,7 @@ const TREND_COLORS: Record<string, string> = {
 export function CarrierPerformance() {
   const [view, setView] = useState<'cards' | 'chart'>('cards')
   const [tierFilter, setTierFilter] = useState<string | null>(null)
-  const { filters } = useFilters()
-  const { region, dateRange } = filters
+  const { region, dateRange } = useActiveFilters('CT-CarrierPerf')
 
   // Carriers don't have a direct origin — filter by tier and show region label in header
   const baseCarriers = CARRIER_PERFORMANCE

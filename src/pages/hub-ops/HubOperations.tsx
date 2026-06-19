@@ -5,8 +5,7 @@ import {
   Timer, Activity, LogIn, LogOut, Loader2,
 } from 'lucide-react'
 import { cn, timeAgo } from '@/lib/utils'
-import { useFilters } from '@/context/FilterContext'
-import { routeOriginRegion, matchesDateRange } from '@/lib/exportCsv'
+import { useActiveFilters } from '@/hooks/useActiveFilters'
 import {
   HUB_VEHICLES, HUBS, CARRIERS_LIST, STATUS_LABEL, STATUS_ORDER,
   hubDwellMins, loadingTimeMins, turnaroundMins, fmtMins, isDelayed,
@@ -504,16 +503,13 @@ export function HubOperations() {
   const [selectedHub, setSelectedHub] = useState(HUBS[0].id)
   const [showAddModal, setShowAddModal] = useState(false)
 
-  const { filters } = useFilters()
-  const { region, dateRange } = filters
+  const { region, dateRange, matchesRoute, matchesDate } = useActiveFilters('HubOps')
 
   // Base vehicles after global region + date filter
   const baseVehicles = useMemo(() =>
-    vehicles.filter(v => {
-      if (region && routeOriginRegion(v.routeCode) !== region) return false
-      if (dateRange.from && dateRange.to && v.arrivedAt && !matchesDateRange(v.arrivedAt, dateRange.from, dateRange.to)) return false
-      return true
-    }),
+    vehicles.filter(v =>
+      matchesRoute(v.routeCode) && matchesDate(v.arrivedAt)
+    ),
     [vehicles, region, dateRange],
   )
 

@@ -5,8 +5,7 @@ import {
   AlertTriangle, Activity, TrendingUp,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { useFilters } from '@/context/FilterContext'
-import { routeOriginRegion, matchesDateRange } from '@/lib/exportCsv'
+import { useActiveFilters } from '@/hooks/useActiveFilters'
 import {
   DISPATCH_LIFECYCLES, LIFECYCLE_STAGES, STAGE_LABEL, STAGE_SHORT,
   STAGE_PHASE, PHASE_STYLE, SLA_STYLE, SLA_LABEL,
@@ -393,16 +392,13 @@ export function DispatchLifecycle() {
   const [search, setSearch]         = useState('')
   const kanbanRef = useRef<HTMLDivElement>(null)
 
-  const { filters } = useFilters()
-  const { region, dateRange } = filters
+  const { region, dateRange, matchesRoute, matchesDate } = useActiveFilters('DispatchLifecycle')
 
   // Base dispatches after global region + date filter
   const baseDispatches = useMemo(() =>
-    dispatches.filter(d => {
-      if (region && routeOriginRegion(d.routeCode) !== region) return false
-      if (d.plannedAt && !matchesDateRange(d.plannedAt, dateRange.from, dateRange.to)) return false
-      return true
-    }),
+    dispatches.filter(d =>
+      matchesRoute(d.routeCode) && matchesDate(d.plannedAt)
+    ),
     [dispatches, region, dateRange],
   )
 

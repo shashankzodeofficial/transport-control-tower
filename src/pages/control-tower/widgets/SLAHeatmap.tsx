@@ -1,7 +1,6 @@
 import React, { useState, useMemo } from 'react'
 import { cn } from '@/lib/utils'
-import { useFilters } from '@/context/FilterContext'
-import { routeOriginRegion } from '@/lib/exportCsv'
+import { useActiveFilters } from '@/hooks/useActiveFilters'
 import { LineChart } from '@/components/charts/LineChart'
 import { SLA_HEATMAP, SLA_TREND_7D } from '../mock/data'
 
@@ -26,11 +25,10 @@ export function SLAHeatmap() {
   const [view, setView] = useState<'heatmap' | 'trend'>('heatmap')
   const [hovered, setHovered] = useState<HoveredCell | null>(null)
 
-  const { filters } = useFilters()
-  const { region, dateRange } = filters
+  const { region, dateRange, matchesRoute } = useActiveFilters('SLAHeatmap')
 
   const cells = useMemo(() =>
-    region ? SLA_HEATMAP.filter(c => routeOriginRegion(c.route) === region) : SLA_HEATMAP,
+    region ? SLA_HEATMAP.filter(c => matchesRoute(c.route)) : SLA_HEATMAP,
     [region, dateRange],
   )
 

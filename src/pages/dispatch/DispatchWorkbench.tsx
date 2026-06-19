@@ -12,6 +12,7 @@ import { SLAClock }      from '@/components/shared/SLAClock'
 import { TabStrip }      from '@/layout/TabStrip'
 import { DISPATCHES, STATUS_COUNTS, type DispatchRecord } from './mock/dispatches'
 import type { DispatchStatus } from '@/theme/tokens'
+import { useActiveFilters } from '@/hooks/useActiveFilters'
 
 // ─── Tab config ───────────────────────────────────────────────────────────────
 
@@ -29,11 +30,11 @@ const STATUS_TABS: { key: DispatchStatus | 'all'; label: string }[] = [
 
 // ─── Mini KPI bar ─────────────────────────────────────────────────────────────
 
-function KPIBar() {
-  const transit   = DISPATCHES.filter(d => d.status === 'transit').length
-  const atRisk    = DISPATCHES.filter(d => d.slaStatus === 'at-risk').length
-  const breached  = DISPATCHES.filter(d => d.slaStatus === 'breached').length
-  const exceptions= DISPATCHES.reduce((s, d) => s + d.exceptionCount, 0)
+function KPIBar({ dispatches }: { dispatches: DispatchRecord[] }) {
+  const transit   = dispatches.filter(d => d.status === 'transit').length
+  const atRisk    = dispatches.filter(d => d.slaStatus === 'at-risk').length
+  const breached  = dispatches.filter(d => d.slaStatus === 'breached').length
+  const exceptions= dispatches.reduce((s, d) => s + d.exceptionCount, 0)
 
   return (
     <div className="grid grid-cols-4 gap-4 px-6 py-3 bg-white border-b border-slate-100">
@@ -173,8 +174,18 @@ export function DispatchWorkbench() {
   const [selectedRows, setSelectedRows] = useState<Set<string>>(new Set())
   const [showNewModal, setShowNewModal] = useState(() => searchParams.get('action') === 'new')
 
+  const { region, dateRange, matchesRoute, matchesDate } = useActiveFilters('DispatchWorkbench')
+
+  // Global filter: region + date slice
+  const baseDispatches = useMemo(() =>
+    DISPATCHES.filter(d =>
+      matchesRoute(d.routeCode) && matchesDate(d.plannedDeparture)
+    ),
+    [region, dateRange],
+  )
+
   const filtered = useMemo(() => {
-    return DISPATCHES.filter(d => {
+    return baseDispatches.filter(d => {
       if (activeTab !== 'all' && d.status !== activeTab) return false
       if (slaFilter !== 'all' && d.slaStatus !== slaFilter) return false
       if (search) {
@@ -190,7 +201,7 @@ export function DispatchWorkbench() {
       }
       return true
     })
-  }, [activeTab, search, slaFilter])
+  }, [baseDispatches, activeTab, search, slaFilter])
 
   function toggleRow(id: string) {
     setSelectedRows(prev => {
@@ -211,7 +222,9 @@ export function DispatchWorkbench() {
   const tabs = STATUS_TABS.map(t => ({
     key: t.key,
     label: t.label,
-    badge: t.key === 'all' ? DISPATCHES.length : (STATUS_COUNTS[t.key as DispatchStatus] ?? 0),
+    badge: t.key === 'all'
+      ? baseDispatches.length
+      : baseDispatches.filter(d => d.status === t.key).length,
   }))
 
   function handleExport() {
@@ -234,7 +247,7 @@ export function DispatchWorkbench() {
       <div className="flex items-center justify-between border-b border-slate-200 px-6 py-3 bg-white">
         <div>
           <h1 className="text-base font-bold text-slate-900">Dispatch Workbench</h1>
-          <p className="text-xs text-slate-400 mt-0.5">{DISPATCHES.length} dispatches · auto-refreshed</p>
+          <p className="text-xs text-slate-400 mt-0.5">{baseDispatches.length} dispatches · auto-refreshed</p>
         </div>
         <div className="flex items-center gap-2">
           <button onClick={handleExport} className="flex h-8 items-center gap-1.5 rounded-lg border border-slate-200 px-3 text-xs font-medium text-slate-600 hover:bg-slate-50 transition-colors">
@@ -250,7 +263,7 @@ export function DispatchWorkbench() {
       </div>
 
       {/* KPI bar */}
-      <KPIBar />
+      <KPIBar dispatches={baseDispatches} />
 
       {/* Status tabs */}
       <TabStrip

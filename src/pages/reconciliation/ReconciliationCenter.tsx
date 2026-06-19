@@ -5,8 +5,8 @@ import {
   ArrowUpDown, DollarSign,
 } from 'lucide-react'
 import { cn, timeAgo } from '@/lib/utils'
-import { exportCsv, cityRegion, matchesDateRange } from '@/lib/exportCsv'
-import { useFilters } from '@/context/FilterContext'
+import { exportCsv } from '@/lib/exportCsv'
+import { useActiveFilters } from '@/hooks/useActiveFilters'
 import { TabStrip }     from '@/layout/TabStrip'
 import { BarChart }     from '@/components/charts/BarChart'
 import { LineChart }    from '@/components/charts/LineChart'
@@ -277,16 +277,13 @@ export function ReconciliationCenter() {
   const [tab, setTab]           = useState('all')
   const [search, setSearch]     = useState('')
   const [selectedId, setSelectedId] = useState<string | null>(null)
-  const { filters } = useFilters()
-  const { region, dateRange } = filters
+  const { region, dateRange, matchesCity, matchesDate } = useActiveFilters('ReconciliationCenter')
 
   // Apply global region + date filters first
   const globalFiltered = useMemo(() =>
-    RECONCILIATIONS.filter(rec => {
-      if (region && cityRegion(rec.origin) !== region) return false
-      if (rec.arrivedAt && !matchesDateRange(rec.arrivedAt, dateRange.from, dateRange.to)) return false
-      return true
-    }),
+    RECONCILIATIONS.filter(rec =>
+      matchesCity(rec.origin) && matchesDate(rec.arrivedAt)
+    ),
     [region, dateRange],
   )
 
