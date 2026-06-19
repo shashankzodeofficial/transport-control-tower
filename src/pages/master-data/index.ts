@@ -1,0 +1,1 @@
+export { MasterDataDashboard } from './MasterDataDashboard'

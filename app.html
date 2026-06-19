@@ -1,0 +1,1751 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>TransportIQ — Enterprise Reconciliation Platform</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --navy:#0f1c2e;--navy-2:#162236;--navy-3:#1e3352;--navy-hover:#243d5f;
+  --accent:#2563eb;--accent-light:#3b82f6;--accent-glow:rgba(37,99,235,.18);
+  --white:#ffffff;--gray-50:#f8fafc;--gray-100:#f1f5f9;--gray-200:#e2e8f0;
+  --gray-300:#cbd5e1;--gray-400:#94a3b8;--gray-500:#64748b;--gray-600:#475569;
+  --gray-700:#334155;--gray-800:#1e293b;--gray-900:#0f172a;
+  --success:#059669;--success-light:#d1fae5;--success-text:#065f46;
+  --warning:#d97706;--warning-light:#fef3c7;--warning-text:#92400e;
+  --danger:#dc2626;--danger-light:#fee2e2;--danger-text:#991b1b;
+  --info:#0284c7;--info-light:#e0f2fe;--info-text:#075985;
+  --sidebar-w:240px;--header-h:60px;
+  --radius-sm:4px;--radius:8px;--radius-lg:12px;--radius-xl:16px;
+  --shadow-sm:0 1px 2px rgba(0,0,0,.06);
+  --shadow:0 1px 3px rgba(0,0,0,.1),0 1px 2px rgba(0,0,0,.06);
+  --shadow-md:0 4px 6px -1px rgba(0,0,0,.1),0 2px 4px -1px rgba(0,0,0,.06);
+  --shadow-lg:0 10px 15px -3px rgba(0,0,0,.1),0 4px 6px -2px rgba(0,0,0,.05);
+  --shadow-xl:0 20px 25px -5px rgba(0,0,0,.1),0 10px 10px -5px rgba(0,0,0,.04);
+  --font:'Inter',system-ui,-apple-system,sans-serif;
+  --font-mono:'JetBrains Mono','Cascadia Code','Fira Code',monospace;
+}
+html{font-family:var(--font);font-size:14px;-webkit-font-smoothing:antialiased}
+body{background:var(--gray-100);color:var(--gray-800);display:flex;min-height:100vh;overflow-x:hidden}
+
+/* ── Sidebar ── */
+#sidebar{
+  width:var(--sidebar-w);min-width:var(--sidebar-w);background:var(--navy);
+  display:flex;flex-direction:column;height:100vh;position:fixed;left:0;top:0;z-index:200;
+  transition:transform .25s ease;
+}
+.sidebar-logo{
+  padding:0 1.25rem;height:var(--header-h);display:flex;align-items:center;gap:.75rem;
+  border-bottom:1px solid rgba(255,255,255,.07);
+}
+.logo-icon{
+  width:32px;height:32px;background:var(--accent);border-radius:8px;
+  display:flex;align-items:center;justify-content:center;flex-shrink:0;
+}
+.logo-text .brand{font-size:.95rem;font-weight:700;color:#fff;letter-spacing:-.01em}
+.logo-text .tagline{font-size:.65rem;color:rgba(255,255,255,.4);letter-spacing:.06em;text-transform:uppercase}
+
+.sidebar-section{padding:.75rem 0}
+.sidebar-section-label{
+  font-size:.62rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;
+  color:rgba(255,255,255,.3);padding:.25rem 1.25rem .5rem;
+}
+.nav-item{
+  display:flex;align-items:center;gap:.7rem;padding:.55rem 1.25rem;
+  color:rgba(255,255,255,.55);font-size:.82rem;font-weight:500;cursor:pointer;
+  border-left:3px solid transparent;transition:all .15s;user-select:none;position:relative;
+}
+.nav-item:hover{background:rgba(255,255,255,.06);color:rgba(255,255,255,.9)}
+.nav-item.active{background:rgba(37,99,235,.2);color:#fff;border-left-color:var(--accent-light)}
+.nav-item .nav-icon{width:16px;height:16px;flex-shrink:0;opacity:.7}
+.nav-item.active .nav-icon{opacity:1}
+.nav-item .badge{
+  margin-left:auto;background:var(--danger);color:#fff;font-size:.6rem;
+  font-weight:700;padding:.15rem .4rem;border-radius:999px;min-width:18px;text-align:center;
+}
+.sidebar-divider{border:none;border-top:1px solid rgba(255,255,255,.07);margin:.25rem 0}
+
+.sidebar-user{
+  margin-top:auto;padding:1rem 1.25rem;border-top:1px solid rgba(255,255,255,.07);
+  display:flex;align-items:center;gap:.65rem;
+}
+.user-avatar{
+  width:32px;height:32px;border-radius:50%;background:var(--navy-3);
+  display:flex;align-items:center;justify-content:center;font-size:.7rem;
+  font-weight:700;color:#fff;flex-shrink:0;border:2px solid rgba(255,255,255,.15);
+}
+.user-info .user-name{font-size:.78rem;font-weight:600;color:#fff}
+.user-info .user-role{font-size:.65rem;color:rgba(255,255,255,.4)}
+
+/* ── Main ── */
+#main{margin-left:var(--sidebar-w);flex:1;display:flex;flex-direction:column;min-height:100vh}
+
+/* ── Top Bar ── */
+#topbar{
+  height:var(--header-h);background:#fff;border-bottom:1px solid var(--gray-200);
+  display:flex;align-items:center;padding:0 1.5rem;gap:1rem;
+  position:sticky;top:0;z-index:100;box-shadow:var(--shadow-sm);
+}
+.topbar-breadcrumb{flex:1;display:flex;align-items:center;gap:.4rem}
+.breadcrumb-item{font-size:.8rem;color:var(--gray-400)}
+.breadcrumb-item.current{color:var(--gray-800);font-weight:600}
+.breadcrumb-sep{color:var(--gray-300)}
+.topbar-actions{display:flex;align-items:center;gap:.5rem}
+.topbar-date{font-size:.75rem;color:var(--gray-400);white-space:nowrap}
+
+/* ── Page Content ── */
+#content{flex:1;padding:1.5rem;display:flex;flex-direction:column;gap:1.25rem}
+
+/* ── Page Header ── */
+.page-header{display:flex;align-items:flex-start;justify-content:space-between;gap:1rem;flex-wrap:wrap}
+.page-title{font-size:1.35rem;font-weight:700;color:var(--gray-900);letter-spacing:-.02em}
+.page-subtitle{font-size:.8rem;color:var(--gray-500);margin-top:.15rem}
+.page-actions{display:flex;gap:.5rem;flex-wrap:wrap;align-items:center}
+
+/* ── Buttons ── */
+.btn{
+  display:inline-flex;align-items:center;gap:.4rem;padding:.5rem 1rem;
+  border-radius:var(--radius);border:none;font-size:.82rem;font-weight:600;
+  cursor:pointer;transition:all .15s;white-space:nowrap;font-family:var(--font);
+  text-decoration:none;
+}
+.btn-primary{background:var(--accent);color:#fff}
+.btn-primary:hover{background:#1d4ed8}
+.btn-secondary{background:#fff;color:var(--gray-700);border:1px solid var(--gray-300)}
+.btn-secondary:hover{background:var(--gray-50);border-color:var(--gray-400)}
+.btn-ghost{background:transparent;color:var(--gray-600);border:1px solid transparent}
+.btn-ghost:hover{background:var(--gray-100)}
+.btn-danger{background:var(--danger);color:#fff}
+.btn-danger:hover{background:#b91c1c}
+.btn-success{background:var(--success);color:#fff}
+.btn-success:hover{background:#047857}
+.btn-sm{padding:.35rem .7rem;font-size:.75rem}
+.btn-icon{padding:.45rem;border-radius:var(--radius)}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.btn:active{transform:scale(.97)}
+
+/* ── KPI Cards ── */
+.kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:1rem}
+.kpi-card{
+  background:#fff;border-radius:var(--radius-lg);padding:1.25rem;
+  box-shadow:var(--shadow);border:1px solid var(--gray-200);
+  display:flex;flex-direction:column;gap:.6rem;position:relative;overflow:hidden;
+}
+.kpi-card::after{
+  content:'';position:absolute;top:0;left:0;right:0;height:3px;
+}
+.kpi-card.success::after{background:var(--success)}
+.kpi-card.warning::after{background:var(--warning)}
+.kpi-card.danger::after{background:var(--danger)}
+.kpi-card.info::after{background:var(--info)}
+.kpi-card.accent::after{background:var(--accent)}
+.kpi-header{display:flex;align-items:center;justify-content:space-between}
+.kpi-label{font-size:.72rem;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--gray-500)}
+.kpi-icon{
+  width:32px;height:32px;border-radius:var(--radius);
+  display:flex;align-items:center;justify-content:center;
+}
+.kpi-icon.success{background:var(--success-light)}
+.kpi-icon.warning{background:var(--warning-light)}
+.kpi-icon.danger{background:var(--danger-light)}
+.kpi-icon.info{background:var(--info-light)}
+.kpi-icon.accent{background:var(--accent-glow)}
+.kpi-value{font-size:1.75rem;font-weight:700;color:var(--gray-900);letter-spacing:-.03em;line-height:1}
+.kpi-meta{display:flex;align-items:center;gap:.35rem;font-size:.72rem}
+.kpi-delta{font-weight:600;display:flex;align-items:center;gap:.15rem}
+.kpi-delta.up{color:var(--success)}
+.kpi-delta.down{color:var(--danger)}
+.kpi-delta.neutral{color:var(--gray-500)}
+.kpi-meta-text{color:var(--gray-400)}
+.kpi-progress{height:4px;background:var(--gray-100);border-radius:999px;overflow:hidden;margin-top:.25rem}
+.kpi-progress-bar{height:100%;border-radius:999px;transition:width .6s ease}
+.kpi-progress-bar.success{background:var(--success)}
+.kpi-progress-bar.warning{background:var(--warning)}
+.kpi-progress-bar.danger{background:var(--danger)}
+
+/* ── Section Card ── */
+.section-card{background:#fff;border-radius:var(--radius-lg);border:1px solid var(--gray-200);box-shadow:var(--shadow);overflow:hidden}
+.section-header{
+  padding:.9rem 1.25rem;border-bottom:1px solid var(--gray-100);
+  display:flex;align-items:center;justify-content:space-between;gap:.75rem;flex-wrap:wrap;
+}
+.section-title{font-size:.9rem;font-weight:700;color:var(--gray-800)}
+.section-subtitle{font-size:.72rem;color:var(--gray-400);margin-top:.1rem}
+.section-actions{display:flex;gap:.4rem;align-items:center;flex-wrap:wrap}
+.section-body{padding:1.25rem}
+.section-body.no-pad{padding:0}
+
+/* ── Status Pill ── */
+.pill{
+  display:inline-flex;align-items:center;gap:.3rem;font-size:.7rem;font-weight:700;
+  padding:.25rem .6rem;border-radius:999px;white-space:nowrap;letter-spacing:.03em;
+}
+.pill::before{content:'';width:6px;height:6px;border-radius:50%;flex-shrink:0}
+.pill.success{background:var(--success-light);color:var(--success-text)}
+.pill.success::before{background:var(--success)}
+.pill.warning{background:var(--warning-light);color:var(--warning-text)}
+.pill.warning::before{background:var(--warning)}
+.pill.danger{background:var(--danger-light);color:var(--danger-text)}
+.pill.danger::before{background:var(--danger)}
+.pill.info{background:var(--info-light);color:var(--info-text)}
+.pill.info::before{background:var(--info)}
+.pill.neutral{background:var(--gray-100);color:var(--gray-600)}
+.pill.neutral::before{background:var(--gray-400)}
+
+/* ── Data Table ── */
+.table-toolbar{
+  display:flex;align-items:center;gap:.65rem;flex-wrap:wrap;
+  padding:.9rem 1.25rem;border-bottom:1px solid var(--gray-100);background:var(--gray-50);
+}
+.search-wrap{position:relative;flex:1;min-width:180px;max-width:300px}
+.search-wrap input{
+  width:100%;padding:.45rem .75rem .45rem 2rem;border:1px solid var(--gray-200);
+  border-radius:var(--radius);font-size:.8rem;background:#fff;color:var(--gray-800);
+  outline:none;transition:border .15s,box-shadow .15s;
+}
+.search-wrap input:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-glow)}
+.search-wrap .si{position:absolute;left:.6rem;top:50%;transform:translateY(-50%);color:var(--gray-400);pointer-events:none}
+.filter-select{
+  padding:.45rem .75rem;border:1px solid var(--gray-200);border-radius:var(--radius);
+  font-size:.8rem;color:var(--gray-700);background:#fff;cursor:pointer;outline:none;
+}
+.filter-select:focus{border-color:var(--accent)}
+.table-count{font-size:.75rem;color:var(--gray-400);margin-left:auto}
+
+.data-table{width:100%;border-collapse:collapse}
+.data-table thead{background:var(--gray-50)}
+.data-table th{
+  padding:.65rem 1rem;text-align:left;font-size:.7rem;font-weight:700;
+  text-transform:uppercase;letter-spacing:.07em;color:var(--gray-500);
+  border-bottom:1px solid var(--gray-200);white-space:nowrap;
+}
+.data-table th.sortable{cursor:pointer;user-select:none}
+.data-table th.sortable:hover{color:var(--gray-700)}
+.data-table td{
+  padding:.7rem 1rem;font-size:.82rem;color:var(--gray-700);
+  border-bottom:1px solid var(--gray-100);
+}
+.data-table tbody tr{transition:background .1s}
+.data-table tbody tr:hover{background:var(--gray-50)}
+.data-table tbody tr:last-child td{border-bottom:none}
+.data-table td.mono{font-family:var(--font-mono);font-size:.76rem;color:var(--gray-600)}
+.data-table td.bold{font-weight:600;color:var(--gray-900)}
+
+.table-pagination{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:.75rem 1.25rem;border-top:1px solid var(--gray-100);
+  font-size:.75rem;color:var(--gray-500);flex-wrap:wrap;gap:.5rem;
+}
+.pagination-controls{display:flex;gap:.25rem}
+.page-btn{
+  width:28px;height:28px;border:1px solid var(--gray-200);border-radius:var(--radius-sm);
+  background:#fff;cursor:pointer;font-size:.75rem;color:var(--gray-600);
+  display:flex;align-items:center;justify-content:center;transition:all .1s;
+}
+.page-btn:hover{background:var(--gray-100)}
+.page-btn.active{background:var(--accent);color:#fff;border-color:var(--accent)}
+
+/* ── Form ── */
+.form-grid{display:grid;gap:1rem}
+.form-grid.g2{grid-template-columns:1fr 1fr}
+.form-grid.g3{grid-template-columns:1fr 1fr 1fr}
+@media(max-width:640px){.form-grid.g2,.form-grid.g3{grid-template-columns:1fr}}
+.field{display:flex;flex-direction:column;gap:.4rem}
+.field label{font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--gray-600)}
+.field label .req{color:var(--danger);margin-left:2px}
+.field input,.field select,.field textarea{
+  border:1px solid var(--gray-200);border-radius:var(--radius);
+  padding:.55rem .85rem;font-size:.85rem;color:var(--gray-800);
+  background:#fff;outline:none;transition:border .15s,box-shadow .15s;
+  font-family:var(--font);width:100%;
+}
+.field input:focus,.field select:focus,.field textarea:focus{
+  border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-glow);
+}
+.field input.has-error,.field select.has-error{border-color:var(--danger)}
+.field .hint{font-size:.72rem;color:var(--gray-400)}
+.field .err{font-size:.72rem;color:var(--danger);display:none}
+.field.error .err{display:block}
+.field.error input,.field.error select{border-color:var(--danger)}
+.field-group{display:flex;gap:.5rem}
+.field-group input{flex:1}
+
+/* ── HU chips ── */
+.hu-scan-row{display:flex;gap:.5rem}
+.hu-scan-row input{flex:1}
+.hu-chips{display:flex;flex-wrap:wrap;gap:.35rem;margin-top:.5rem;min-height:32px}
+.hu-chip{
+  display:inline-flex;align-items:center;gap:.35rem;background:var(--accent-glow);
+  border:1px solid rgba(37,99,235,.25);color:var(--accent);border-radius:var(--radius-sm);
+  padding:.2rem .5rem .2rem .6rem;font-size:.75rem;font-weight:600;font-family:var(--font-mono);
+}
+.hu-chip button{
+  background:none;border:none;cursor:pointer;color:var(--gray-400);line-height:1;
+  font-size:.9rem;padding:0 .1rem;transition:color .1s;
+}
+.hu-chip button:hover{color:var(--danger)}
+.hu-placeholder{font-size:.75rem;color:var(--gray-300);align-self:center}
+
+/* ── Exception Items ── */
+.exception-list{display:flex;flex-direction:column;gap:0}
+.exception-item{
+  display:flex;align-items:flex-start;gap:.85rem;padding:.9rem 1.25rem;
+  border-bottom:1px solid var(--gray-100);cursor:pointer;transition:background .1s;
+}
+.exception-item:last-child{border-bottom:none}
+.exception-item:hover{background:var(--gray-50)}
+.exc-indicator{width:3px;border-radius:999px;align-self:stretch;flex-shrink:0;min-height:32px}
+.exc-indicator.danger{background:var(--danger)}
+.exc-indicator.warning{background:var(--warning)}
+.exc-indicator.info{background:var(--info)}
+.exc-body{flex:1;min-width:0}
+.exc-title{font-size:.82rem;font-weight:600;color:var(--gray-800)}
+.exc-desc{font-size:.75rem;color:var(--gray-500);margin-top:.1rem}
+.exc-meta{display:flex;align-items:center;gap:.5rem;margin-top:.3rem;flex-wrap:wrap}
+.exc-tag{font-size:.65rem;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:var(--gray-400)}
+.exc-time{font-size:.68rem;color:var(--gray-400)}
+.exc-action{flex-shrink:0;margin-left:auto}
+
+/* ── Progress Bar ── */
+.prog-wrap{height:6px;background:var(--gray-100);border-radius:999px;overflow:hidden}
+.prog-bar{height:100%;border-radius:999px;transition:width .4s ease}
+.prog-bar.success{background:var(--success)}
+.prog-bar.warning{background:var(--warning)}
+.prog-bar.danger{background:var(--danger)}
+.prog-bar.accent{background:var(--accent)}
+
+/* ── Timeline ── */
+.timeline{display:flex;flex-direction:column;gap:0}
+.tl-item{display:flex;gap:.75rem;padding:.6rem 0;position:relative}
+.tl-dot{
+  width:10px;height:10px;border-radius:50%;flex-shrink:0;margin-top:.3rem;
+  position:relative;z-index:1;border:2px solid #fff;
+}
+.tl-dot.success{background:var(--success);box-shadow:0 0 0 2px var(--success)}
+.tl-dot.warning{background:var(--warning);box-shadow:0 0 0 2px var(--warning)}
+.tl-dot.danger{background:var(--danger);box-shadow:0 0 0 2px var(--danger)}
+.tl-dot.neutral{background:var(--gray-300);box-shadow:0 0 0 2px var(--gray-300)}
+.tl-dot.pending{background:#fff;border:2px solid var(--gray-300)}
+.tl-line{position:absolute;left:4px;top:24px;bottom:-6px;width:2px;background:var(--gray-100)}
+.tl-content{flex:1;padding-bottom:.4rem}
+.tl-event{font-size:.8rem;font-weight:600;color:var(--gray-800)}
+.tl-detail{font-size:.72rem;color:var(--gray-500)}
+.tl-time{font-size:.68rem;color:var(--gray-400);margin-top:.15rem}
+
+/* ── Drawer ── */
+.drawer-mask{
+  position:fixed;inset:0;background:rgba(15,28,46,.5);z-index:900;
+  opacity:0;pointer-events:none;transition:opacity .2s;
+}
+.drawer-mask.open{opacity:1;pointer-events:all}
+.drawer{
+  position:fixed;right:0;top:0;bottom:0;width:min(520px,100vw);
+  background:#fff;box-shadow:var(--shadow-xl);z-index:901;
+  transform:translateX(100%);transition:transform .25s ease;
+  display:flex;flex-direction:column;
+}
+.drawer-mask.open~.drawer{transform:translateX(0)}
+.drawer-head{
+  padding:1rem 1.5rem;border-bottom:1px solid var(--gray-200);
+  display:flex;align-items:center;justify-content:space-between;
+  background:var(--gray-50);
+}
+.drawer-head-text .title{font-size:.95rem;font-weight:700;color:var(--gray-900)}
+.drawer-head-text .sub{font-size:.72rem;color:var(--gray-400);margin-top:.1rem}
+.drawer-close{
+  background:none;border:none;cursor:pointer;color:var(--gray-400);
+  width:28px;height:28px;display:flex;align-items:center;justify-content:center;
+  border-radius:var(--radius-sm);font-size:1.1rem;transition:background .1s;
+}
+.drawer-close:hover{background:var(--gray-200);color:var(--gray-700)}
+.drawer-body{flex:1;overflow-y:auto;padding:1.5rem}
+.drawer-footer{
+  padding:1rem 1.5rem;border-top:1px solid var(--gray-200);
+  display:flex;gap:.6rem;justify-content:flex-end;
+}
+.detail-section{margin-bottom:1.5rem}
+.detail-section-title{
+  font-size:.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.1em;
+  color:var(--gray-400);margin-bottom:.65rem;padding-bottom:.4rem;
+  border-bottom:1px solid var(--gray-100);
+}
+.detail-grid{display:grid;grid-template-columns:1fr 1fr;gap:.5rem}
+.detail-item{padding:.5rem;background:var(--gray-50);border-radius:var(--radius-sm)}
+.detail-item .lbl{font-size:.65rem;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:var(--gray-400)}
+.detail-item .val{font-size:.82rem;font-weight:600;color:var(--gray-800);margin-top:.15rem;word-break:break-all}
+.detail-item .val.mono{font-family:var(--font-mono);font-size:.75rem}
+
+/* ── Modal ── */
+.modal-mask{
+  position:fixed;inset:0;background:rgba(15,28,46,.5);z-index:800;
+  display:flex;align-items:center;justify-content:center;padding:1rem;
+  opacity:0;pointer-events:none;transition:opacity .2s;
+}
+.modal-mask.open{opacity:1;pointer-events:all}
+.modal{
+  background:#fff;border-radius:var(--radius-xl);padding:1.75rem;
+  max-width:420px;width:100%;box-shadow:var(--shadow-xl);
+  transform:translateY(24px) scale(.97);transition:transform .2s;
+}
+.modal-mask.open .modal{transform:none}
+.modal-title{font-size:1.05rem;font-weight:700;color:var(--gray-900);margin-bottom:.4rem}
+.modal-body{font-size:.85rem;color:var(--gray-500);margin-bottom:1.5rem;line-height:1.5}
+.modal-actions{display:flex;gap:.6rem;justify-content:flex-end}
+
+/* ── Toast ── */
+#toasts{position:fixed;bottom:1.25rem;right:1.25rem;z-index:2000;display:flex;flex-direction:column;gap:.4rem;pointer-events:none}
+.toast{
+  display:flex;align-items:center;gap:.6rem;padding:.7rem 1rem;border-radius:var(--radius);
+  box-shadow:var(--shadow-lg);font-size:.82rem;font-weight:500;max-width:320px;
+  animation:toastIn .2s ease;pointer-events:all;
+}
+.toast.success{background:#fff;border-left:3px solid var(--success);color:var(--gray-800)}
+.toast.error{background:#fff;border-left:3px solid var(--danger);color:var(--gray-800)}
+.toast.info{background:#fff;border-left:3px solid var(--accent);color:var(--gray-800)}
+.toast.warning{background:#fff;border-left:3px solid var(--warning);color:var(--gray-800)}
+.toast-icon{font-size:1rem;flex-shrink:0}
+@keyframes toastIn{from{transform:translateX(110%);opacity:0}to{transform:none;opacity:1}}
+
+/* ── Charts (CSS-only sparklines) ── */
+.mini-chart{display:flex;align-items:flex-end;gap:2px;height:28px}
+.mini-bar{border-radius:2px 2px 0 0;min-width:5px;flex:1;transition:height .3s}
+.mini-bar.accent{background:var(--accent)}
+.mini-bar.success{background:var(--success)}
+.mini-bar.muted{background:var(--gray-200)}
+
+/* ── Route Cards ── */
+.route-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:.85rem}
+.route-card{
+  border:1px solid var(--gray-200);border-radius:var(--radius-lg);padding:1rem;
+  cursor:pointer;transition:all .15s;background:#fff;
+}
+.route-card:hover{border-color:var(--accent-light);box-shadow:0 0 0 3px var(--accent-glow)}
+.route-card.active{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-glow)}
+.route-head{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:.65rem}
+.route-name{font-size:.88rem;font-weight:700;color:var(--gray-900)}
+.route-code{font-size:.68rem;font-family:var(--font-mono);color:var(--gray-400)}
+.route-stats{display:grid;grid-template-columns:1fr 1fr;gap:.4rem;margin-top:.6rem}
+.rs-item{background:var(--gray-50);border-radius:var(--radius-sm);padding:.4rem .5rem}
+.rs-val{font-size:.88rem;font-weight:700;color:var(--gray-800)}
+.rs-lbl{font-size:.65rem;color:var(--gray-400);text-transform:uppercase;letter-spacing:.04em}
+
+/* ── Tabs ── */
+.tabs{display:flex;gap:0;border-bottom:2px solid var(--gray-100)}
+.tab{
+  padding:.6rem 1rem;font-size:.82rem;font-weight:600;color:var(--gray-400);
+  cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-2px;transition:all .15s;
+}
+.tab:hover{color:var(--gray-700)}
+.tab.active{color:var(--accent);border-bottom-color:var(--accent)}
+
+/* ── Upload Area ── */
+.upload-area{
+  border:2px dashed var(--gray-200);border-radius:var(--radius-lg);
+  padding:2rem;text-align:center;cursor:pointer;transition:all .15s;
+}
+.upload-area:hover{border-color:var(--accent);background:var(--accent-glow)}
+
+/* ── Notification Dot ── */
+.notif-dot{
+  width:8px;height:8px;background:var(--danger);border-radius:50%;
+  position:absolute;top:6px;right:6px;border:2px solid #fff;
+}
+
+/* ── Empty State ── */
+.empty-state{text-align:center;padding:3rem 1.5rem;color:var(--gray-400)}
+.empty-state .empty-icon{font-size:2.5rem;margin-bottom:.75rem;opacity:.4}
+.empty-state .empty-title{font-size:.88rem;font-weight:600;color:var(--gray-500);margin-bottom:.25rem}
+.empty-state .empty-sub{font-size:.78rem}
+
+/* ── Responsive ── */
+@media(max-width:900px){
+  #sidebar{transform:translateX(-100%)}
+  #sidebar.mobile-open{transform:none}
+  #main{margin-left:0}
+  .form-grid.g3{grid-template-columns:1fr 1fr}
+}
+@media(max-width:600px){
+  #content{padding:1rem}
+  .kpi-grid{grid-template-columns:1fr 1fr}
+  .form-grid.g3{grid-template-columns:1fr}
+  .detail-grid{grid-template-columns:1fr}
+}
+
+/* ── Scrollbar ── */
+::-webkit-scrollbar{width:5px;height:5px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--gray-200);border-radius:999px}
+::-webkit-scrollbar-thumb:hover{background:var(--gray-300)}
+
+/* ── Utilities ── */
+.flex{display:flex}.flex-col{flex-direction:column}.items-center{align-items:center}
+.justify-between{justify-content:space-between}.gap-1{gap:.5rem}.gap-2{gap:1rem}
+.text-sm{font-size:.8rem}.text-xs{font-size:.72rem}.text-muted{color:var(--gray-400)}
+.fw-600{font-weight:600}.fw-700{font-weight:700}
+.mt-1{margin-top:.5rem}.mt-2{margin-top:1rem}.mb-1{margin-bottom:.5rem}.mb-2{margin-bottom:1rem}
+.w-full{width:100%}.hidden{display:none!important}
+</style>
+</head>
+<body>
+
+<!-- ══════════════ SIDEBAR ══════════════ -->
+<nav id="sidebar">
+  <div class="sidebar-logo">
+    <div class="logo-icon">
+      <svg width="16" height="16" fill="none" viewBox="0 0 16 16">
+        <path d="M1 12L5 4l4 5 3-3 3 4" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </div>
+    <div class="logo-text">
+      <div class="brand">TransportIQ</div>
+      <div class="tagline">Reconciliation Platform</div>
+    </div>
+  </div>
+
+  <div class="sidebar-section">
+    <div class="sidebar-section-label">Overview</div>
+    <div class="nav-item active" data-page="dashboard">
+      <svg class="nav-icon" fill="none" viewBox="0 0 16 16"><rect x="1" y="1" width="6" height="6" rx="1.5" stroke="currentColor" stroke-width="1.4"/><rect x="9" y="1" width="6" height="6" rx="1.5" stroke="currentColor" stroke-width="1.4"/><rect x="1" y="9" width="6" height="6" rx="1.5" stroke="currentColor" stroke-width="1.4"/><rect x="9" y="9" width="6" height="6" rx="1.5" stroke="currentColor" stroke-width="1.4"/></svg>
+      Dashboard
+    </div>
+    <div class="nav-item" data-page="exceptions">
+      <svg class="nav-icon" fill="none" viewBox="0 0 16 16"><path d="M8 1L1 14h14L8 1z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/><path d="M8 6v4M8 11.5v.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
+      Exceptions
+      <span class="badge" id="exc-badge">0</span>
+    </div>
+  </div>
+
+  <hr class="sidebar-divider"/>
+
+  <div class="sidebar-section">
+    <div class="sidebar-section-label">Operations</div>
+    <div class="nav-item" data-page="dispatch">
+      <svg class="nav-icon" fill="none" viewBox="0 0 16 16"><rect x="1" y="4" width="14" height="9" rx="1.5" stroke="currentColor" stroke-width="1.4"/><path d="M4 4V3a1 1 0 011-1h6a1 1 0 011 1v1" stroke="currentColor" stroke-width="1.4"/><path d="M5 9h6M5 11h4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
+      New Dispatch
+    </div>
+    <div class="nav-item" data-page="records">
+      <svg class="nav-icon" fill="none" viewBox="0 0 16 16"><path d="M3 2h10a1 1 0 011 1v10a1 1 0 01-1 1H3a1 1 0 01-1-1V3a1 1 0 011-1z" stroke="currentColor" stroke-width="1.4"/><path d="M5 6h6M5 9h6M5 12h4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
+      Dispatch Records
+    </div>
+    <div class="nav-item" data-page="routes">
+      <svg class="nav-icon" fill="none" viewBox="0 0 16 16"><circle cx="3" cy="13" r="1.5" stroke="currentColor" stroke-width="1.4"/><circle cx="13" cy="3" r="1.5" stroke="currentColor" stroke-width="1.4"/><path d="M3 11.5V8a5 5 0 015-5h3.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
+      Routes
+    </div>
+  </div>
+
+  <hr class="sidebar-divider"/>
+
+  <div class="sidebar-section">
+    <div class="sidebar-section-label">Analytics</div>
+    <div class="nav-item" data-page="reports">
+      <svg class="nav-icon" fill="none" viewBox="0 0 16 16"><path d="M2 12L6 7l3 3 2-2 3 3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/><rect x="1" y="1" width="14" height="14" rx="2" stroke="currentColor" stroke-width="1.4"/></svg>
+      Reports
+    </div>
+  </div>
+
+  <div class="sidebar-user">
+    <div class="user-avatar" id="user-avatar-init">WO</div>
+    <div class="user-info">
+      <div class="user-name" id="user-display-name">Warehouse Ops</div>
+      <div class="user-role" id="user-display-role">Operator</div>
+    </div>
+  </div>
+</nav>
+
+<!-- ══════════════ MAIN ══════════════ -->
+<div id="main">
+  <!-- Top Bar -->
+  <div id="topbar">
+    <button class="btn btn-ghost btn-icon" id="menu-toggle" style="display:none">
+      <svg width="16" height="16" fill="none" viewBox="0 0 16 16"><path d="M2 4h12M2 8h12M2 12h12" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+    </button>
+    <div class="topbar-breadcrumb">
+      <span class="breadcrumb-item" id="bc-root">TransportIQ</span>
+      <span class="breadcrumb-sep">›</span>
+      <span class="breadcrumb-item current" id="bc-page">Dashboard</span>
+    </div>
+    <div class="topbar-actions">
+      <span class="topbar-date" id="topbar-date"></span>
+      <button class="btn btn-ghost btn-icon btn-sm" title="Notifications" style="position:relative" onclick="navigate('exceptions')">
+        <svg width="15" height="15" fill="none" viewBox="0 0 16 16"><path d="M8 1a5 5 0 00-5 5v3L1 11h14l-2-2V6a5 5 0 00-5-5z" stroke="currentColor" stroke-width="1.4"/><path d="M6.5 12.5a1.5 1.5 0 003 0" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
+        <span class="notif-dot" id="notif-dot" style="display:none"></span>
+      </button>
+      <div style="width:28px;height:28px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;font-size:.65rem;font-weight:700;color:#fff;cursor:pointer" id="topbar-avatar" title="Switch role" onclick="openRoleSwitcher()">WO</div>
+    </div>
+  </div>
+
+  <!-- Page Content -->
+  <div id="content">
+    <!-- Pages injected here by JS -->
+  </div>
+</div>
+
+<!-- ══════════════ DRAWER ══════════════ -->
+<div class="drawer-mask" id="drawer-mask"></div>
+<div class="drawer" id="drawer">
+  <div class="drawer-head">
+    <div class="drawer-head-text">
+      <div class="title" id="drawer-title">Detail</div>
+      <div class="sub" id="drawer-sub"></div>
+    </div>
+    <button class="drawer-close" onclick="closeDrawer()">✕</button>
+  </div>
+  <div class="drawer-body" id="drawer-body"></div>
+  <div class="drawer-footer" id="drawer-footer"></div>
+</div>
+
+<!-- ══════════════ MODAL ══════════════ -->
+<div class="modal-mask" id="modal-mask">
+  <div class="modal">
+    <div class="modal-title" id="modal-title"></div>
+    <div class="modal-body" id="modal-body"></div>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-danger" id="modal-confirm-btn">Confirm</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════ ROLE SWITCHER MODAL ══════════════ -->
+<div class="modal-mask" id="role-modal">
+  <div class="modal">
+    <div class="modal-title">Switch Role</div>
+    <div class="modal-body">Select your role to adjust the dashboard view.</div>
+    <div style="display:flex;flex-direction:column;gap:.5rem;margin-bottom:1.25rem">
+      <button class="btn btn-secondary w-full" style="justify-content:flex-start;gap:.75rem" onclick="switchRole('WO','Warehouse Operator','Operator')">
+        <span style="width:28px;height:28px;background:var(--accent);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:.65rem;font-weight:700;color:#fff">WO</span>
+        <span><div style="font-size:.82rem;font-weight:600">Warehouse Operator</div><div style="font-size:.72rem;color:var(--gray-400)">Create & manage dispatches</div></span>
+      </button>
+      <button class="btn btn-secondary w-full" style="justify-content:flex-start;gap:.75rem" onclick="switchRole('TM','Transport Manager','Manager')">
+        <span style="width:28px;height:28px;background:var(--warning);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:.65rem;font-weight:700;color:#fff">TM</span>
+        <span><div style="font-size:.82rem;font-weight:600">Transport Manager</div><div style="font-size:.72rem;color:var(--gray-400)">Monitor routes & exceptions</div></span>
+      </button>
+      <button class="btn btn-secondary w-full" style="justify-content:flex-start;gap:.75rem" onclick="switchRole('SC','Supply Chain Manager','SC Manager')">
+        <span style="width:28px;height:28px;background:var(--success);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:.65rem;font-weight:700;color:#fff">SC</span>
+        <span><div style="font-size:.82rem;font-weight:600">Supply Chain Manager</div><div style="font-size:.72rem;color:var(--gray-400)">Analytics & reports</div></span>
+      </button>
+    </div>
+    <div style="text-align:right"><button class="btn btn-secondary" onclick="document.getElementById('role-modal').classList.remove('open')">Close</button></div>
+  </div>
+</div>
+
+<!-- Toasts -->
+<div id="toasts"></div>
+
+<script>
+/* ═══════════════════════════════════════════
+   STORAGE
+═══════════════════════════════════════════ */
+const K = { routes:'tiq_routes', dispatches:'tiq_dispatches', exceptions:'tiq_exc' };
+const load = k => JSON.parse(localStorage.getItem(k)||'null');
+const save = (k,v) => localStorage.setItem(k, JSON.stringify(v));
+
+let routes = load(K.routes) || [
+  { id:'R001', name:'Delhi → Mumbai', code:'DEL-MUM', origin:'Delhi', dest:'Mumbai', distance:1400, active:true },
+  { id:'R002', name:'Mumbai → Bangalore', code:'MUM-BLR', origin:'Mumbai', dest:'Bangalore', distance:980, active:true },
+  { id:'R003', name:'Delhi → Hyderabad', code:'DEL-HYD', origin:'Delhi', dest:'Hyderabad', distance:1500, active:true },
+  { id:'R004', name:'Bangalore → Chennai', code:'BLR-CHE', origin:'Bangalore', dest:'Chennai', distance:340, active:true },
+  { id:'R005', name:'Kolkata → Delhi', code:'KOL-DEL', origin:'Kolkata', dest:'Delhi', distance:1470, active:false },
+];
+let dispatches = load(K.dispatches) || seedDispatches();
+let exceptions = load(K.exceptions) || [];
+
+function seedDispatches(){
+  const veh = ['MH12AB1234','DL10CD5678','KA03EF9012','TN22GH3456','WB15IJ7890'];
+  const st = ['saved','in-transit','delivered','exception'];
+  const now = Date.now();
+  const arr = [];
+  for(let i=0;i<18;i++){
+    const r = routes[i%routes.length];
+    arr.push({
+      id: 'DSP'+String(i+1).padStart(4,'0'),
+      createdAt: new Date(now - i*3600000*8).toISOString(),
+      route: r.code, routeName: r.name,
+      vehicle: veh[i%veh.length],
+      asn: 'ASN-2024-'+String(1000+i),
+      invoice: 'INV-2024-'+String(2000+i),
+      gatepass: 'GP-'+String(100+i),
+      seal: 'SL-'+String(9000+i),
+      hu: Array.from({length: 2+i%5}, (_,j)=>'HU'+String(i*10+j+1).padStart(7,'0')),
+      status: st[i%4],
+      driverName: ['Rajesh Kumar','Sunil Verma','Anil Singh','Mohan Rao'][i%4],
+      driverPhone: '98'+String(10000000+i),
+      carrier: ['Blue Dart','GATI','Mahindra Logistics','TCI Express'][i%4],
+      notes: i%3===0?'Handle with care':'',
+    });
+  }
+  save(K.dispatches, arr);
+  return arr;
+}
+
+/* ═══════════════════════════════════════════
+   STATE
+═══════════════════════════════════════════ */
+let currentPage = 'dashboard';
+let huList = [];
+let editingId = null;
+let currentRole = { init:'WO', name:'Warehouse Ops', role:'Operator' };
+let modalCallback = null;
+
+/* ═══════════════════════════════════════════
+   UTILITIES
+═══════════════════════════════════════════ */
+const uid = () => Math.random().toString(36).slice(2,10).toUpperCase();
+const fmtDate = iso => new Date(iso).toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'});
+const fmtTime = iso => new Date(iso).toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'});
+const fmtDateTime = iso => fmtDate(iso)+' '+fmtTime(iso);
+
+function statusPill(s){
+  const map = { saved:'info', 'in-transit':'warning', delivered:'success', exception:'danger' };
+  const lbl = { saved:'Saved', 'in-transit':'In Transit', delivered:'Delivered', exception:'Exception' };
+  return `<span class="pill ${map[s]||'neutral'}">${lbl[s]||s}</span>`;
+}
+
+function toast(msg, type='info', dur=3500){
+  const icons = {success:'✓',error:'✕',info:'ℹ',warning:'⚠'};
+  const el = document.createElement('div');
+  el.className=`toast ${type}`;
+  el.innerHTML=`<span class="toast-icon">${icons[type]}</span><span>${msg}</span>`;
+  document.getElementById('toasts').appendChild(el);
+  setTimeout(()=>el.remove(), dur);
+}
+
+function openModal(title, body, onConfirm, confirmLabel='Confirm', danger=true){
+  document.getElementById('modal-title').textContent = title;
+  document.getElementById('modal-body').textContent = body;
+  const btn = document.getElementById('modal-confirm-btn');
+  btn.textContent = confirmLabel;
+  btn.className = `btn ${danger?'btn-danger':'btn-primary'}`;
+  modalCallback = onConfirm;
+  document.getElementById('modal-mask').classList.add('open');
+}
+function closeModal(){ document.getElementById('modal-mask').classList.remove('open'); modalCallback=null; }
+document.getElementById('modal-confirm-btn').onclick = () => { closeModal(); if(modalCallback) modalCallback(); };
+document.getElementById('modal-mask').onclick = e => { if(e.target===e.currentTarget) closeModal(); };
+
+function openDrawer(title, sub, bodyHTML, footerHTML=''){
+  document.getElementById('drawer-title').textContent = title;
+  document.getElementById('drawer-sub').textContent = sub;
+  document.getElementById('drawer-body').innerHTML = bodyHTML;
+  document.getElementById('drawer-footer').innerHTML = footerHTML;
+  document.getElementById('drawer-mask').classList.add('open');
+}
+function closeDrawer(){ document.getElementById('drawer-mask').classList.remove('open'); }
+document.getElementById('drawer-mask').onclick = closeDrawer;
+
+function openRoleSwitcher(){ document.getElementById('role-modal').classList.add('open'); }
+function switchRole(init, name, role){
+  currentRole = {init, name, role};
+  document.getElementById('user-avatar-init').textContent = init;
+  document.getElementById('user-display-name').textContent = name;
+  document.getElementById('user-display-role').textContent = role;
+  document.getElementById('topbar-avatar').textContent = init;
+  document.getElementById('role-modal').classList.remove('open');
+  toast(`Switched to ${name}`, 'info');
+  renderPage();
+}
+
+/* ═══════════════════════════════════════════
+   NAVIGATION
+═══════════════════════════════════════════ */
+const pageLabels = { dashboard:'Dashboard', exceptions:'Exceptions', dispatch:'New Dispatch', records:'Dispatch Records', routes:'Routes', reports:'Reports' };
+
+function navigate(page){
+  currentPage = page;
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.toggle('active', n.dataset.page===page));
+  document.getElementById('bc-page').textContent = pageLabels[page]||page;
+  closeDrawer();
+  renderPage();
+  // mobile close
+  document.getElementById('sidebar').classList.remove('mobile-open');
+}
+
+document.querySelectorAll('.nav-item[data-page]').forEach(n => {
+  n.addEventListener('click', () => navigate(n.dataset.page));
+});
+document.getElementById('menu-toggle').addEventListener('click', () => {
+  document.getElementById('sidebar').classList.toggle('mobile-open');
+});
+
+function renderPage(){
+  const c = document.getElementById('content');
+  if(currentPage==='dashboard') c.innerHTML = renderDashboard();
+  else if(currentPage==='exceptions') c.innerHTML = renderExceptions();
+  else if(currentPage==='dispatch') c.innerHTML = renderDispatch();
+  else if(currentPage==='records') c.innerHTML = renderRecords();
+  else if(currentPage==='routes') c.innerHTML = renderRoutes();
+  else if(currentPage==='reports') c.innerHTML = renderReports();
+  attachPageEvents();
+  updateExcBadge();
+}
+
+/* ═══════════════════════════════════════════
+   DASHBOARD
+═══════════════════════════════════════════ */
+function renderDashboard(){
+  const total = dispatches.length;
+  const delivered = dispatches.filter(d=>d.status==='delivered').length;
+  const inTransit = dispatches.filter(d=>d.status==='in-transit').length;
+  const exc = dispatches.filter(d=>d.status==='exception').length;
+  const huTotal = dispatches.reduce((s,d)=>s+d.hu.length,0);
+  const delivRate = total ? Math.round(delivered/total*100) : 0;
+
+  const recent = [...dispatches].sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt)).slice(0,8);
+  const excItems = dispatches.filter(d=>d.status==='exception').slice(0,5);
+
+  // Route distribution
+  const routeDist = {};
+  dispatches.forEach(d=>{ routeDist[d.route]=(routeDist[d.route]||0)+1; });
+  const topRoutes = Object.entries(routeDist).sort((a,b)=>b[1]-a[1]).slice(0,5);
+  const maxRt = Math.max(...topRoutes.map(r=>r[1]),1);
+
+  return `
+  <div class="page-header">
+    <div>
+      <div class="page-title">Operations Dashboard</div>
+      <div class="page-subtitle">Real-time view of all dispatch and transport activity</div>
+    </div>
+    <div class="page-actions">
+      <button class="btn btn-secondary btn-sm" onclick="renderPage()">
+        <svg width="12" height="12" fill="none" viewBox="0 0 14 14"><path d="M1 7a6 6 0 1 0 6-6A6 6 0 0 0 3 3L1 1" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        Refresh
+      </button>
+      <button class="btn btn-primary btn-sm" onclick="navigate('dispatch')">+ New Dispatch</button>
+    </div>
+  </div>
+
+  <!-- KPIs -->
+  <div class="kpi-grid">
+    <div class="kpi-card accent">
+      <div class="kpi-header">
+        <span class="kpi-label">Total Dispatches</span>
+        <div class="kpi-icon accent">
+          <svg width="14" height="14" fill="none" viewBox="0 0 16 16"><rect x="1" y="4" width="14" height="9" rx="1.5" stroke="var(--accent)" stroke-width="1.5"/><path d="M5 7h6M5 10h4" stroke="var(--accent)" stroke-width="1.4" stroke-linecap="round"/></svg>
+        </div>
+      </div>
+      <div class="kpi-value">${total}</div>
+      <div class="kpi-meta">
+        <span class="kpi-delta up">↑ 12%</span>
+        <span class="kpi-meta-text">vs last week</span>
+      </div>
+    </div>
+    <div class="kpi-card success">
+      <div class="kpi-header">
+        <span class="kpi-label">Delivered</span>
+        <div class="kpi-icon success">
+          <svg width="14" height="14" fill="none" viewBox="0 0 16 16"><path d="M2 8l4 4 8-8" stroke="var(--success)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </div>
+      </div>
+      <div class="kpi-value">${delivered}</div>
+      <div class="kpi-meta">
+        <span class="kpi-delta neutral">${delivRate}%</span>
+        <span class="kpi-meta-text">delivery rate</span>
+      </div>
+      <div class="kpi-progress"><div class="kpi-progress-bar success" style="width:${delivRate}%"></div></div>
+    </div>
+    <div class="kpi-card warning">
+      <div class="kpi-header">
+        <span class="kpi-label">In Transit</span>
+        <div class="kpi-icon warning">
+          <svg width="14" height="14" fill="none" viewBox="0 0 16 16"><path d="M1 10h10V6H8L6 4H1v6z" stroke="var(--warning)" stroke-width="1.4" stroke-linejoin="round"/><circle cx="4" cy="12" r="1.5" stroke="var(--warning)" stroke-width="1.4"/><circle cx="12" cy="12" r="1.5" stroke="var(--warning)" stroke-width="1.4"/><path d="M11 10h4V8l-2-2h-2v4z" stroke="var(--warning)" stroke-width="1.4" stroke-linejoin="round"/></svg>
+        </div>
+      </div>
+      <div class="kpi-value">${inTransit}</div>
+      <div class="kpi-meta">
+        <span class="kpi-delta neutral">${total?Math.round(inTransit/total*100):0}%</span>
+        <span class="kpi-meta-text">of total</span>
+      </div>
+    </div>
+    <div class="kpi-card ${exc>0?'danger':'success'}">
+      <div class="kpi-header">
+        <span class="kpi-label">Exceptions</span>
+        <div class="kpi-icon ${exc>0?'danger':'success'}">
+          <svg width="14" height="14" fill="none" viewBox="0 0 16 16"><path d="M8 1L1 14h14L8 1z" stroke="${exc>0?'var(--danger)':'var(--success)'}" stroke-width="1.4" stroke-linejoin="round"/><path d="M8 6v4M8 11.5v.5" stroke="${exc>0?'var(--danger)':'var(--success)'}" stroke-width="1.4" stroke-linecap="round"/></svg>
+        </div>
+      </div>
+      <div class="kpi-value" style="color:${exc>0?'var(--danger)':'inherit'}">${exc}</div>
+      <div class="kpi-meta">
+        <span class="kpi-delta ${exc>0?'down':'up'}">${exc>0?'↑ Needs attention':'✓ Clear'}</span>
+      </div>
+    </div>
+    <div class="kpi-card info">
+      <div class="kpi-header">
+        <span class="kpi-label">Total HUs Scanned</span>
+        <div class="kpi-icon info">
+          <svg width="14" height="14" fill="none" viewBox="0 0 16 16"><rect x="1" y="3" width="14" height="10" rx="2" stroke="var(--info)" stroke-width="1.4"/><path d="M5 7h.5M7.5 7H8M10 7h.5M5 9.5h.5M7.5 9.5H8M10 9.5h.5" stroke="var(--info)" stroke-width="2" stroke-linecap="round"/></svg>
+        </div>
+      </div>
+      <div class="kpi-value">${huTotal}</div>
+      <div class="kpi-meta">
+        <span class="kpi-delta neutral">${total?Math.round(huTotal/total*10)/10:0} avg/dispatch</span>
+      </div>
+    </div>
+    <div class="kpi-card accent">
+      <div class="kpi-header">
+        <span class="kpi-label">Active Routes</span>
+        <div class="kpi-icon accent">
+          <svg width="14" height="14" fill="none" viewBox="0 0 16 16"><circle cx="3" cy="13" r="1.5" stroke="var(--accent)" stroke-width="1.4"/><circle cx="13" cy="3" r="1.5" stroke="var(--accent)" stroke-width="1.4"/><path d="M3 11.5V8a5 5 0 015-5h3.5" stroke="var(--accent)" stroke-width="1.4" stroke-linecap="round"/></svg>
+        </div>
+      </div>
+      <div class="kpi-value">${routes.filter(r=>r.active).length}</div>
+      <div class="kpi-meta">
+        <span class="kpi-delta neutral">${routes.length} total configured</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Two-column layout -->
+  <div style="display:grid;grid-template-columns:1fr 340px;gap:1.25rem">
+    <!-- Recent Dispatches Table -->
+    <div class="section-card">
+      <div class="section-header">
+        <div>
+          <div class="section-title">Recent Dispatches</div>
+          <div class="section-subtitle">Last 8 dispatch transactions</div>
+        </div>
+        <button class="btn btn-ghost btn-sm" onclick="navigate('records')">View All →</button>
+      </div>
+      <div class="section-body no-pad">
+        <div style="overflow-x:auto">
+          <table class="data-table">
+            <thead><tr>
+              <th>Dispatch ID</th><th>Route</th><th>Vehicle</th><th>HUs</th><th>Status</th><th>Date</th>
+            </tr></thead>
+            <tbody>
+            ${recent.map(d=>`<tr style="cursor:pointer" onclick="showDispatchDetail('${d.id}')">
+              <td class="mono bold">${d.id}</td>
+              <td><span style="font-size:.72rem;font-weight:600;background:var(--navy);color:#fff;padding:.15rem .45rem;border-radius:3px;font-family:var(--font-mono)">${d.route}</span></td>
+              <td class="mono">${d.vehicle}</td>
+              <td style="text-align:center"><span style="font-weight:600;color:var(--accent)">${d.hu.length}</span></td>
+              <td>${statusPill(d.status)}</td>
+              <td style="color:var(--gray-400);font-size:.75rem">${fmtDate(d.createdAt)}</td>
+            </tr>`).join('')}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right Column -->
+    <div style="display:flex;flex-direction:column;gap:1rem">
+      <!-- Exceptions -->
+      <div class="section-card" style="flex:1">
+        <div class="section-header">
+          <div class="section-title" style="color:var(--danger)">
+            ⚠ Active Exceptions
+          </div>
+          <button class="btn btn-ghost btn-sm" onclick="navigate('exceptions')">View All</button>
+        </div>
+        ${excItems.length===0
+          ? `<div class="empty-state"><div class="empty-icon">✓</div><div class="empty-title">No exceptions</div><div class="empty-sub">All dispatches are on track</div></div>`
+          : `<div class="exception-list">${excItems.map(d=>`
+          <div class="exception-item" onclick="showDispatchDetail('${d.id}')">
+            <div class="exc-indicator danger"></div>
+            <div class="exc-body">
+              <div class="exc-title">${d.id} — ${d.route}</div>
+              <div class="exc-desc">${d.vehicle} · ${d.hu.length} HUs</div>
+              <div class="exc-meta">
+                <span class="exc-tag">Exception</span>
+                <span class="exc-time">${fmtDate(d.createdAt)}</span>
+              </div>
+            </div>
+          </div>`).join('')}</div>`
+        }
+      </div>
+
+      <!-- Route Volume -->
+      <div class="section-card">
+        <div class="section-header">
+          <div class="section-title">Route Volume</div>
+        </div>
+        <div class="section-body" style="padding:.75rem 1.25rem">
+          ${topRoutes.map(([code,cnt])=>`
+          <div style="margin-bottom:.65rem">
+            <div style="display:flex;justify-content:space-between;margin-bottom:.25rem">
+              <span style="font-size:.75rem;font-weight:600;color:var(--gray-700)">${code}</span>
+              <span style="font-size:.72rem;color:var(--gray-400)">${cnt}</span>
+            </div>
+            <div class="prog-wrap"><div class="prog-bar accent" style="width:${Math.round(cnt/maxRt*100)}%"></div></div>
+          </div>`).join('')}
+        </div>
+      </div>
+    </div>
+  </div>
+  `;
+}
+
+/* ═══════════════════════════════════════════
+   EXCEPTIONS PAGE
+═══════════════════════════════════════════ */
+function renderExceptions(){
+  const excDispatches = dispatches.filter(d=>d.status==='exception');
+  return `
+  <div class="page-header">
+    <div>
+      <div class="page-title">Exception Dashboard</div>
+      <div class="page-subtitle">${excDispatches.length} dispatch(es) require attention</div>
+    </div>
+    <div class="page-actions">
+      <button class="btn btn-secondary btn-sm" onclick="renderPage()">Refresh</button>
+    </div>
+  </div>
+
+  ${excDispatches.length===0
+    ? `<div class="section-card"><div class="empty-state" style="padding:4rem"><div class="empty-icon">✅</div><div class="empty-title">No Active Exceptions</div><div class="empty-sub">All dispatches are proceeding normally.</div></div></div>`
+    : `<div class="section-card">
+    <div class="section-header"><div class="section-title">Exception Items</div><span class="pill danger">${excDispatches.length} Active</span></div>
+    <div class="exception-list">
+    ${excDispatches.map(d=>`
+      <div class="exception-item" onclick="showDispatchDetail('${d.id}')">
+        <div class="exc-indicator danger"></div>
+        <div class="exc-body">
+          <div class="exc-title">${d.id} — ${d.routeName}</div>
+          <div class="exc-desc">Vehicle: ${d.vehicle} &nbsp;·&nbsp; Carrier: ${d.carrier} &nbsp;·&nbsp; ${d.hu.length} HUs</div>
+          <div class="exc-meta">
+            <span class="exc-tag">Seal: ${d.seal}</span>
+            <span class="exc-tag">Invoice: ${d.invoice}</span>
+            <span class="exc-time">${fmtDateTime(d.createdAt)}</span>
+          </div>
+        </div>
+        <div class="exc-action" style="display:flex;gap:.4rem">
+          <button class="btn btn-secondary btn-sm" onclick="event.stopPropagation();resolveException('${d.id}')">Resolve</button>
+          <button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();showDispatchDetail('${d.id}')">Detail</button>
+        </div>
+      </div>`).join('')}
+    </div>
+    </div>`
+  }`;
+}
+
+function resolveException(id){
+  openModal('Resolve Exception', `Mark dispatch ${id} as resolved and set status to In Transit?`, ()=>{
+    const d = dispatches.find(x=>x.id===id);
+    if(d){ d.status='in-transit'; save(K.dispatches, dispatches); renderPage(); toast('Exception resolved.','success'); }
+  }, 'Resolve', false);
+}
+
+/* ═══════════════════════════════════════════
+   NEW DISPATCH
+═══════════════════════════════════════════ */
+function renderDispatch(){
+  const routeOpts = routes.filter(r=>r.active).map(r=>`<option value="${r.code}">${r.name} (${r.code})</option>`).join('');
+  return `
+  <div class="page-header">
+    <div>
+      <div class="page-title">New Dispatch</div>
+      <div class="page-subtitle">Create a new origin loading dispatch record</div>
+    </div>
+  </div>
+
+  <div style="display:grid;grid-template-columns:1fr 320px;gap:1.25rem;align-items:start">
+    <div style="display:flex;flex-direction:column;gap:1rem">
+
+      <!-- Route Info -->
+      <div class="section-card">
+        <div class="section-header"><div class="section-title">Route Information</div></div>
+        <div class="section-body">
+          <div class="form-grid g2">
+            <div class="field" id="f-route">
+              <label>Route <span class="req">*</span></label>
+              <select id="inp-route">
+                <option value="">— Select Route —</option>
+                ${routeOpts}
+              </select>
+              <span class="err">Please select a route.</span>
+            </div>
+            <div class="field">
+              <label>Carrier / Transporter</label>
+              <input type="text" id="inp-carrier" placeholder="e.g. Blue Dart Logistics"/>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- References -->
+      <div class="section-card">
+        <div class="section-header"><div class="section-title">Vehicle & Document Numbers</div></div>
+        <div class="section-body">
+          <div class="form-grid g2">
+            <div class="field" id="f-vehicle">
+              <label>Vehicle Number <span class="req">*</span></label>
+              <input type="text" id="inp-vehicle" placeholder="e.g. MH12AB1234" maxlength="12"/>
+              <span class="err">Vehicle number is required.</span>
+            </div>
+            <div class="field" id="f-asn">
+              <label>ASN Number <span class="req">*</span></label>
+              <input type="text" id="inp-asn" placeholder="e.g. ASN-2024-00123"/>
+              <span class="err">ASN number is required.</span>
+            </div>
+            <div class="field" id="f-invoice">
+              <label>Invoice Number <span class="req">*</span></label>
+              <input type="text" id="inp-invoice" placeholder="e.g. INV-2024-00456"/>
+              <span class="err">Invoice number is required.</span>
+            </div>
+            <div class="field" id="f-gatepass">
+              <label>Gate Pass Number <span class="req">*</span></label>
+              <input type="text" id="inp-gatepass" placeholder="e.g. GP-001"/>
+              <span class="err">Gate pass is required.</span>
+            </div>
+            <div class="field" id="f-seal">
+              <label>Seal Number <span class="req">*</span></label>
+              <input type="text" id="inp-seal" placeholder="e.g. SL-998877"/>
+              <span class="err">Seal number is required.</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Driver -->
+      <div class="section-card">
+        <div class="section-header"><div class="section-title">Driver Information</div><span class="pill neutral">Optional</span></div>
+        <div class="section-body">
+          <div class="form-grid g2">
+            <div class="field">
+              <label>Driver Name</label>
+              <input type="text" id="inp-driver" placeholder="e.g. Rajesh Kumar"/>
+            </div>
+            <div class="field">
+              <label>Driver Phone</label>
+              <input type="tel" id="inp-phone" placeholder="e.g. 9876543210" maxlength="10"/>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- HU -->
+      <div class="section-card">
+        <div class="section-header">
+          <div>
+            <div class="section-title">Handling Units (HU)</div>
+            <div class="section-subtitle">Scan or type each HU barcode</div>
+          </div>
+          <span class="pill accent" id="hu-count-pill">0 scanned</span>
+        </div>
+        <div class="section-body">
+          <div class="field" id="f-hu">
+            <label>HU Barcode <span class="req">*</span></label>
+            <div class="hu-scan-row">
+              <input type="text" id="inp-hu" placeholder="Scan or enter HU barcode…" autocomplete="off"/>
+              <button class="btn btn-secondary" id="btn-add-hu">Add</button>
+            </div>
+            <span class="hint">Press Enter after each barcode. Duplicates are rejected.</span>
+            <span class="err">At least one HU barcode is required.</span>
+          </div>
+          <div class="hu-chips" id="hu-chips">
+            <span class="hu-placeholder" id="hu-placeholder">No HU barcodes added yet</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Notes -->
+      <div class="section-card">
+        <div class="section-header"><div class="section-title">Notes</div><span class="pill neutral">Optional</span></div>
+        <div class="section-body">
+          <div class="field">
+            <textarea id="inp-notes" rows="3" placeholder="Special handling instructions, remarks…"></textarea>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Right: Summary -->
+    <div style="display:flex;flex-direction:column;gap:1rem;position:sticky;top:calc(var(--header-h) + 1.5rem)">
+      <div class="section-card">
+        <div class="section-header"><div class="section-title">Dispatch Summary</div></div>
+        <div class="section-body">
+          <div id="dispatch-summary" style="display:flex;flex-direction:column;gap:.6rem">
+            <div class="detail-item"><div class="lbl">Route</div><div class="val" id="sum-route" style="color:var(--gray-400)">Not selected</div></div>
+            <div class="detail-item"><div class="lbl">Vehicle</div><div class="val" id="sum-vehicle" style="color:var(--gray-400)">—</div></div>
+            <div class="detail-item"><div class="lbl">ASN</div><div class="val mono" id="sum-asn" style="color:var(--gray-400)">—</div></div>
+            <div class="detail-item"><div class="lbl">Invoice</div><div class="val mono" id="sum-invoice" style="color:var(--gray-400)">—</div></div>
+            <div class="detail-item"><div class="lbl">Gate Pass</div><div class="val mono" id="sum-gatepass" style="color:var(--gray-400)">—</div></div>
+            <div class="detail-item"><div class="lbl">Seal</div><div class="val mono" id="sum-seal" style="color:var(--gray-400)">—</div></div>
+            <div class="detail-item"><div class="lbl">HU Count</div><div class="val" id="sum-hu" style="color:var(--gray-400)">0 units</div></div>
+          </div>
+        </div>
+      </div>
+
+      <button class="btn btn-primary w-full" id="btn-save-dispatch" style="padding:.75rem">
+        <svg width="14" height="14" fill="none" viewBox="0 0 16 16"><path d="M2 8l4 4 8-8" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        Save Dispatch
+      </button>
+      <button class="btn btn-ghost w-full btn-sm" id="btn-reset-dispatch">Reset Form</button>
+    </div>
+  </div>
+  `;
+}
+
+/* ═══════════════════════════════════════════
+   RECORDS PAGE
+═══════════════════════════════════════════ */
+let recordsFilter = { q:'', status:'all', route:'all' };
+let recordsPage = 1;
+const PER_PAGE = 10;
+
+function renderRecords(){
+  const routeOpts = ['all',...new Set(dispatches.map(d=>d.route))].map(r=>`<option value="${r}">${r==='all'?'All Routes':r}</option>`).join('');
+  return `
+  <div class="page-header">
+    <div>
+      <div class="page-title">Dispatch Records</div>
+      <div class="page-subtitle">${dispatches.length} total dispatch records</div>
+    </div>
+    <div class="page-actions">
+      <button class="btn btn-primary btn-sm" onclick="navigate('dispatch')">+ New Dispatch</button>
+    </div>
+  </div>
+  <div class="section-card">
+    <div class="table-toolbar">
+      <div class="search-wrap">
+        <svg class="si" width="13" height="13" fill="none" viewBox="0 0 14 14"><circle cx="6" cy="6" r="4.5" stroke="#94a3b8" stroke-width="1.4"/><path d="M9.5 9.5l2.5 2.5" stroke="#94a3b8" stroke-width="1.4" stroke-linecap="round"/></svg>
+        <input type="text" id="rec-search" placeholder="Search dispatch, vehicle, ASN…" oninput="recordsFilter.q=this.value;recordsPage=1;refreshRecordsTable()"/>
+      </div>
+      <select class="filter-select" id="rec-status" onchange="recordsFilter.status=this.value;recordsPage=1;refreshRecordsTable()">
+        <option value="all">All Status</option>
+        <option value="saved">Saved</option>
+        <option value="in-transit">In Transit</option>
+        <option value="delivered">Delivered</option>
+        <option value="exception">Exception</option>
+      </select>
+      <select class="filter-select" id="rec-route" onchange="recordsFilter.route=this.value;recordsPage=1;refreshRecordsTable()">
+        ${routeOpts}
+      </select>
+      <span class="table-count" id="rec-count"></span>
+    </div>
+    <div style="overflow-x:auto">
+      <table class="data-table" id="rec-table">
+        <thead><tr>
+          <th>Dispatch ID</th><th>Date</th><th>Route</th><th>Vehicle</th>
+          <th>ASN</th><th>Invoice</th><th>Gate Pass</th><th>Seal</th>
+          <th style="text-align:center">HUs</th><th>Status</th><th></th>
+        </tr></thead>
+        <tbody id="rec-tbody"></tbody>
+      </table>
+    </div>
+    <div class="table-pagination">
+      <span id="rec-pagination-info"></span>
+      <div class="pagination-controls" id="rec-pagination-ctrl"></div>
+    </div>
+  </div>
+  `;
+}
+
+function getFilteredDispatches(){
+  const q = recordsFilter.q.toLowerCase();
+  return dispatches.filter(d=>{
+    if(recordsFilter.status!=='all' && d.status!==recordsFilter.status) return false;
+    if(recordsFilter.route!=='all' && d.route!==recordsFilter.route) return false;
+    if(q && ![d.id,d.vehicle,d.asn,d.invoice,d.gatepass,d.seal,d.route].some(v=>v.toLowerCase().includes(q))) return false;
+    return true;
+  }).sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt));
+}
+
+function refreshRecordsTable(){
+  const filtered = getFilteredDispatches();
+  const total = filtered.length;
+  const pages = Math.max(1,Math.ceil(total/PER_PAGE));
+  recordsPage = Math.min(recordsPage, pages);
+  const slice = filtered.slice((recordsPage-1)*PER_PAGE, recordsPage*PER_PAGE);
+
+  document.getElementById('rec-count').textContent = `${total} record${total!==1?'s':''}`;
+  document.getElementById('rec-pagination-info').textContent = `Showing ${slice.length} of ${total}`;
+
+  const ctrl = document.getElementById('rec-pagination-ctrl');
+  ctrl.innerHTML = [
+    `<button class="page-btn" onclick="recordsPage=Math.max(1,recordsPage-1);refreshRecordsTable()" ${recordsPage<=1?'disabled':''}>‹</button>`,
+    ...Array.from({length:pages},(_,i)=>`<button class="page-btn${recordsPage===i+1?' active':''}" onclick="recordsPage=${i+1};refreshRecordsTable()">${i+1}</button>`),
+    `<button class="page-btn" onclick="recordsPage=Math.min(${pages},recordsPage+1);refreshRecordsTable()" ${recordsPage>=pages?'disabled':''}>›</button>`,
+  ].join('');
+
+  document.getElementById('rec-tbody').innerHTML = slice.length===0
+    ? `<tr><td colspan="11" class="empty-state" style="padding:2.5rem">No records match filters.</td></tr>`
+    : slice.map(d=>`<tr style="cursor:pointer" onclick="showDispatchDetail('${d.id}')">
+        <td class="mono bold">${d.id}</td>
+        <td style="font-size:.75rem;color:var(--gray-500)">${fmtDate(d.createdAt)}</td>
+        <td><span style="font-size:.7rem;font-weight:700;background:var(--navy);color:#fff;padding:.15rem .45rem;border-radius:3px;font-family:var(--font-mono)">${d.route}</span></td>
+        <td class="mono">${d.vehicle}</td>
+        <td class="mono">${d.asn}</td>
+        <td class="mono">${d.invoice}</td>
+        <td class="mono">${d.gatepass}</td>
+        <td class="mono">${d.seal}</td>
+        <td style="text-align:center;font-weight:600;color:var(--accent)">${d.hu.length}</td>
+        <td>${statusPill(d.status)}</td>
+        <td>
+          <div style="display:flex;gap:.25rem" onclick="event.stopPropagation()">
+            <button class="btn btn-ghost btn-sm btn-icon" title="View" onclick="showDispatchDetail('${d.id}')">
+              <svg width="12" height="12" fill="none" viewBox="0 0 14 14"><circle cx="7" cy="7" r="2.5" stroke="currentColor" stroke-width="1.4"/><path d="M1 7s2-5 6-5 6 5 6 5-2 5-6 5-6-5-6-5z" stroke="currentColor" stroke-width="1.4"/></svg>
+            </button>
+            <button class="btn btn-ghost btn-sm btn-icon" title="Change Status" onclick="changeStatusMenu('${d.id}', event)">
+              <svg width="12" height="12" fill="none" viewBox="0 0 14 14"><circle cx="7" cy="7" r="1" fill="currentColor"/><circle cx="3" cy="7" r="1" fill="currentColor"/><circle cx="11" cy="7" r="1" fill="currentColor"/></svg>
+            </button>
+          </div>
+        </td>
+      </tr>`).join('');
+}
+
+function changeStatusMenu(id, ev){
+  const d = dispatches.find(x=>x.id===id);
+  if(!d) return;
+  const statuses = ['saved','in-transit','delivered','exception'];
+  const body = `<div style="display:flex;flex-direction:column;gap:.5rem">
+    ${statuses.map(s=>`<button class="btn btn-secondary w-full btn-sm" style="justify-content:flex-start" onclick="updateStatus('${id}','${s}');closeModal()">${s.charAt(0).toUpperCase()+s.slice(1)}</button>`).join('')}
+  </div>`;
+  document.getElementById('modal-title').textContent = `Update Status — ${id}`;
+  document.getElementById('modal-body').innerHTML = body;
+  document.getElementById('modal-confirm-btn').style.display = 'none';
+  document.getElementById('modal-mask').classList.add('open');
+}
+
+function updateStatus(id, status){
+  const d = dispatches.find(x=>x.id===id);
+  if(d){ d.status=status; save(K.dispatches, dispatches); refreshRecordsTable(); updateExcBadge(); toast(`Status updated to ${status}`,'success'); }
+}
+
+/* ═══════════════════════════════════════════
+   ROUTES PAGE
+═══════════════════════════════════════════ */
+function renderRoutes(){
+  return `
+  <div class="page-header">
+    <div>
+      <div class="page-title">Routes</div>
+      <div class="page-subtitle">${routes.length} routes configured</div>
+    </div>
+    <div class="page-actions">
+      <button class="btn btn-primary btn-sm" onclick="openAddRoute()">+ Add Route</button>
+    </div>
+  </div>
+  <div class="route-grid" id="route-grid">
+    ${routes.map(r=>renderRouteCard(r)).join('')}
+  </div>`;
+}
+
+function renderRouteCard(r){
+  const cnt = dispatches.filter(d=>d.route===r.code).length;
+  const delivered = dispatches.filter(d=>d.route===r.code&&d.status==='delivered').length;
+  const exc = dispatches.filter(d=>d.route===r.code&&d.status==='exception').length;
+  return `
+  <div class="route-card">
+    <div class="route-head">
+      <div>
+        <div class="route-name">${r.name}</div>
+        <div class="route-code">${r.code} · ${r.distance} km</div>
+      </div>
+      <span class="pill ${r.active?'success':'neutral'}">${r.active?'Active':'Inactive'}</span>
+    </div>
+    <div class="prog-wrap" style="margin:.5rem 0"><div class="prog-bar accent" style="width:${cnt?Math.min(100,cnt*8):0}%"></div></div>
+    <div class="route-stats">
+      <div class="rs-item"><div class="rs-val">${cnt}</div><div class="rs-lbl">Dispatches</div></div>
+      <div class="rs-item"><div class="rs-val" style="color:var(--success)">${delivered}</div><div class="rs-lbl">Delivered</div></div>
+      <div class="rs-item"><div class="rs-val" style="color:var(--danger)">${exc}</div><div class="rs-lbl">Exceptions</div></div>
+      <div class="rs-item"><div class="rs-val">${r.origin}</div><div class="rs-lbl">Origin</div></div>
+    </div>
+    <div style="display:flex;gap:.4rem;margin-top:.75rem">
+      <button class="btn btn-secondary btn-sm" style="flex:1" onclick="toggleRouteActive('${r.id}')">${r.active?'Deactivate':'Activate'}</button>
+      <button class="btn btn-ghost btn-sm btn-icon" onclick="deleteRoute('${r.id}')">
+        <svg width="12" height="12" fill="none" viewBox="0 0 14 14"><path d="M2 3h10M5 3V2h4v1M6 6v4M8 6v4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><path d="M3 3l.7 8h6.6L11 3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+    </div>
+  </div>`;
+}
+
+function openAddRoute(){
+  openDrawer('Add New Route','Configure a new transport route',`
+    <div style="display:flex;flex-direction:column;gap:1rem">
+      <div class="form-grid g2">
+        <div class="field" id="af-name">
+          <label>Route Name <span class="req">*</span></label>
+          <input type="text" id="ar-name" placeholder="e.g. Pune → Nashik"/>
+          <span class="err">Name is required.</span>
+        </div>
+        <div class="field" id="af-code">
+          <label>Route Code <span class="req">*</span></label>
+          <input type="text" id="ar-code" placeholder="e.g. PUN-NSK" style="text-transform:uppercase"/>
+          <span class="err">Code is required.</span>
+        </div>
+        <div class="field">
+          <label>Origin</label>
+          <input type="text" id="ar-origin" placeholder="e.g. Pune"/>
+        </div>
+        <div class="field">
+          <label>Destination</label>
+          <input type="text" id="ar-dest" placeholder="e.g. Nashik"/>
+        </div>
+        <div class="field">
+          <label>Distance (km)</label>
+          <input type="number" id="ar-dist" placeholder="e.g. 210" min="0"/>
+        </div>
+      </div>
+    </div>
+  `, `<button class="btn btn-secondary" onclick="closeDrawer()">Cancel</button><button class="btn btn-primary" onclick="saveNewRoute()">Save Route</button>`);
+}
+
+function saveNewRoute(){
+  const name = document.getElementById('ar-name').value.trim();
+  const code = document.getElementById('ar-code').value.trim().toUpperCase();
+  let ok = true;
+  if(!name){ document.getElementById('af-name').classList.add('error'); ok=false; } else document.getElementById('af-name').classList.remove('error');
+  if(!code){ document.getElementById('af-code').classList.add('error'); ok=false; } else document.getElementById('af-code').classList.remove('error');
+  if(!ok) return;
+  if(routes.find(r=>r.code===code)){ toast('Route code already exists.','error'); return; }
+  routes.push({ id:'R'+uid(), name, code, origin:document.getElementById('ar-origin').value.trim(), dest:document.getElementById('ar-dest').value.trim(), distance:+document.getElementById('ar-dist').value||0, active:true });
+  save(K.routes, routes);
+  closeDrawer();
+  toast('Route added successfully.','success');
+  renderPage();
+}
+
+function toggleRouteActive(id){
+  const r = routes.find(x=>x.id===id);
+  if(r){ r.active=!r.active; save(K.routes,routes); renderPage(); toast(`Route ${r.active?'activated':'deactivated'}.`,'info'); }
+}
+
+function deleteRoute(id){
+  const r = routes.find(x=>x.id===id);
+  openModal('Delete Route',`Delete route "${r?.name}"? This cannot be undone.`,()=>{
+    routes = routes.filter(x=>x.id!==id); save(K.routes,routes); renderPage(); toast('Route deleted.','info');
+  });
+}
+
+/* ═══════════════════════════════════════════
+   REPORTS PAGE
+═══════════════════════════════════════════ */
+function renderReports(){
+  const byStatus = {};
+  dispatches.forEach(d=>{ byStatus[d.status]=(byStatus[d.status]||0)+1; });
+  const byRoute = {};
+  dispatches.forEach(d=>{ byRoute[d.route]=(byRoute[d.route]||0)+1; });
+  const topCarriers = {};
+  dispatches.forEach(d=>{ if(d.carrier) topCarriers[d.carrier]=(topCarriers[d.carrier]||0)+1; });
+  const maxHU = Math.max(...dispatches.map(d=>d.hu.length),1);
+
+  return `
+  <div class="page-header">
+    <div>
+      <div class="page-title">Analytics & Reports</div>
+      <div class="page-subtitle">Operational intelligence and performance metrics</div>
+    </div>
+    <div class="page-actions">
+      <button class="btn btn-secondary btn-sm" onclick="exportCSV()">
+        <svg width="12" height="12" fill="none" viewBox="0 0 14 14"><path d="M7 1v8M4 6l3 3 3-3" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/><path d="M2 10v1a1 1 0 001 1h8a1 1 0 001-1v-1" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
+        Export CSV
+      </button>
+    </div>
+  </div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.25rem">
+    <div class="section-card">
+      <div class="section-header"><div class="section-title">Status Distribution</div></div>
+      <div class="section-body">
+        ${['saved','in-transit','delivered','exception'].map(s=>{
+          const cnt = byStatus[s]||0;
+          const pct = dispatches.length ? Math.round(cnt/dispatches.length*100) : 0;
+          const colors = {saved:'accent','in-transit':'warning',delivered:'success',exception:'danger'};
+          return `<div style="margin-bottom:.85rem">
+            <div style="display:flex;justify-content:space-between;margin-bottom:.3rem">
+              <span style="font-size:.78rem;font-weight:600;text-transform:capitalize">${s.replace('-',' ')}</span>
+              <span style="font-size:.78rem;color:var(--gray-500)">${cnt} (${pct}%)</span>
+            </div>
+            <div class="prog-wrap"><div class="prog-bar ${colors[s]}" style="width:${pct}%"></div></div>
+          </div>`;
+        }).join('')}
+      </div>
+    </div>
+    <div class="section-card">
+      <div class="section-header"><div class="section-title">Dispatch Volume by Route</div></div>
+      <div class="section-body">
+        ${Object.entries(byRoute).sort((a,b)=>b[1]-a[1]).map(([code,cnt])=>{
+          const max = Math.max(...Object.values(byRoute));
+          return `<div style="margin-bottom:.85rem">
+            <div style="display:flex;justify-content:space-between;margin-bottom:.3rem">
+              <span style="font-size:.75rem;font-weight:700;font-family:var(--font-mono)">${code}</span>
+              <span style="font-size:.78rem;color:var(--gray-500)">${cnt}</span>
+            </div>
+            <div class="prog-wrap"><div class="prog-bar accent" style="width:${Math.round(cnt/max*100)}%"></div></div>
+          </div>`;
+        }).join('')}
+      </div>
+    </div>
+    <div class="section-card">
+      <div class="section-header"><div class="section-title">Carrier Performance</div></div>
+      <div class="section-body">
+        <table class="data-table">
+          <thead><tr><th>Carrier</th><th>Dispatches</th><th>Delivered</th><th>Exceptions</th></tr></thead>
+          <tbody>
+            ${Object.entries(topCarriers).map(([carrier,cnt])=>{
+              const del = dispatches.filter(d=>d.carrier===carrier&&d.status==='delivered').length;
+              const exc = dispatches.filter(d=>d.carrier===carrier&&d.status==='exception').length;
+              return `<tr><td class="bold">${carrier}</td><td>${cnt}</td><td style="color:var(--success);font-weight:600">${del}</td><td style="color:${exc>0?'var(--danger)':'var(--gray-400)'};font-weight:600">${exc}</td></tr>`;
+            }).join('')}
+          </tbody>
+        </table>
+      </div>
+    </div>
+    <div class="section-card">
+      <div class="section-header"><div class="section-title">Summary Statistics</div></div>
+      <div class="section-body">
+        <div class="detail-grid">
+          <div class="detail-item"><div class="lbl">Total Dispatches</div><div class="val">${dispatches.length}</div></div>
+          <div class="detail-item"><div class="lbl">Total HUs</div><div class="val">${dispatches.reduce((s,d)=>s+d.hu.length,0)}</div></div>
+          <div class="detail-item"><div class="lbl">Active Routes</div><div class="val">${routes.filter(r=>r.active).length}</div></div>
+          <div class="detail-item"><div class="lbl">Exception Rate</div><div class="val" style="color:var(--danger)">${dispatches.length?Math.round((byStatus.exception||0)/dispatches.length*100):0}%</div></div>
+          <div class="detail-item"><div class="lbl">Delivery Rate</div><div class="val" style="color:var(--success)">${dispatches.length?Math.round((byStatus.delivered||0)/dispatches.length*100):0}%</div></div>
+          <div class="detail-item"><div class="lbl">Avg HUs/Dispatch</div><div class="val">${dispatches.length?(dispatches.reduce((s,d)=>s+d.hu.length,0)/dispatches.length).toFixed(1):0}</div></div>
+        </div>
+      </div>
+    </div>
+  </div>`;
+}
+
+function exportCSV(){
+  const headers = ['Dispatch ID','Date','Route','Vehicle','ASN','Invoice','Gate Pass','Seal','HU Count','Status','Carrier','Driver'];
+  const rows = dispatches.map(d=>[d.id,fmtDate(d.createdAt),d.route,d.vehicle,d.asn,d.invoice,d.gatepass,d.seal,d.hu.length,d.status,d.carrier||'',d.driverName||'']);
+  const csv = [headers,...rows].map(r=>r.map(v=>`"${v}"`).join(',')).join('\n');
+  const a = document.createElement('a');
+  a.href='data:text/csv;charset=utf-8,'+encodeURIComponent(csv);
+  a.download=`dispatches_${new Date().toISOString().slice(0,10)}.csv`;
+  a.click();
+  toast('CSV exported successfully.','success');
+}
+
+/* ═══════════════════════════════════════════
+   DISPATCH DETAIL DRAWER
+═══════════════════════════════════════════ */
+function showDispatchDetail(id){
+  const d = dispatches.find(x=>x.id===id);
+  if(!d) return;
+  const r = routes.find(x=>x.code===d.route);
+  const timeline = buildTimeline(d);
+  openDrawer(d.id, d.routeName || d.route, `
+    <div class="detail-section">
+      <div class="detail-section-title">Status & Route</div>
+      <div style="display:flex;gap:.5rem;align-items:center;flex-wrap:wrap;margin-bottom:.75rem">
+        ${statusPill(d.status)}
+        <span style="font-size:.72rem;color:var(--gray-400)">${fmtDateTime(d.createdAt)}</span>
+      </div>
+      <div class="detail-grid">
+        <div class="detail-item"><div class="lbl">Route</div><div class="val">${d.routeName||d.route}</div></div>
+        <div class="detail-item"><div class="lbl">Distance</div><div class="val">${r?.distance||'—'} km</div></div>
+        <div class="detail-item"><div class="lbl">Origin</div><div class="val">${r?.origin||'—'}</div></div>
+        <div class="detail-item"><div class="lbl">Destination</div><div class="val">${r?.dest||'—'}</div></div>
+      </div>
+    </div>
+    <div class="detail-section">
+      <div class="detail-section-title">Vehicle & Documents</div>
+      <div class="detail-grid">
+        <div class="detail-item"><div class="lbl">Vehicle No.</div><div class="val mono">${d.vehicle}</div></div>
+        <div class="detail-item"><div class="lbl">Carrier</div><div class="val">${d.carrier||'—'}</div></div>
+        <div class="detail-item"><div class="lbl">ASN</div><div class="val mono">${d.asn}</div></div>
+        <div class="detail-item"><div class="lbl">Invoice</div><div class="val mono">${d.invoice}</div></div>
+        <div class="detail-item"><div class="lbl">Gate Pass</div><div class="val mono">${d.gatepass}</div></div>
+        <div class="detail-item"><div class="lbl">Seal No.</div><div class="val mono">${d.seal}</div></div>
+      </div>
+    </div>
+    ${d.driverName?`<div class="detail-section">
+      <div class="detail-section-title">Driver</div>
+      <div class="detail-grid">
+        <div class="detail-item"><div class="lbl">Name</div><div class="val">${d.driverName}</div></div>
+        <div class="detail-item"><div class="lbl">Phone</div><div class="val mono">${d.driverPhone||'—'}</div></div>
+      </div>
+    </div>`:''}
+    <div class="detail-section">
+      <div class="detail-section-title">Handling Units (${d.hu.length})</div>
+      <div style="display:flex;flex-wrap:wrap;gap:.3rem">${d.hu.map(h=>`<span class="hu-chip" style="cursor:default">${h}</span>`).join('')}</div>
+    </div>
+    <div class="detail-section">
+      <div class="detail-section-title">Timeline</div>
+      <div class="timeline">${timeline}</div>
+    </div>
+    ${d.notes?`<div class="detail-section"><div class="detail-section-title">Notes</div><div style="font-size:.82rem;color:var(--gray-600);background:var(--gray-50);padding:.65rem;border-radius:var(--radius-sm)">${d.notes}</div></div>`:''}
+  `,`
+    <button class="btn btn-secondary" onclick="closeDrawer()">Close</button>
+    <button class="btn btn-secondary" onclick="changeStatusMenu('${d.id}',event);closeDrawer()">Change Status</button>
+    <button class="btn btn-danger btn-sm" onclick="deleteDispatch('${d.id}');closeDrawer()">Delete</button>
+  `);
+}
+
+function buildTimeline(d){
+  const steps = [
+    { label:'Dispatch Created', time:d.createdAt, dot:'success' },
+    { label:'Gate Pass Issued', time: new Date(new Date(d.createdAt).getTime()+3600000).toISOString(), dot: d.status!=='saved'?'success':'pending' },
+    { label:'Vehicle Loaded & Sealed', time: new Date(new Date(d.createdAt).getTime()+7200000).toISOString(), dot: ['in-transit','delivered','exception'].includes(d.status)?'success':'pending' },
+    { label: d.status==='exception'?'Exception Raised':'In Transit', time: new Date(new Date(d.createdAt).getTime()+10800000).toISOString(), dot: d.status==='exception'?'danger':d.status==='in-transit'||d.status==='delivered'?'warning':'pending' },
+    { label:'Delivered at Destination', time: new Date(new Date(d.createdAt).getTime()+86400000).toISOString(), dot: d.status==='delivered'?'success':'pending' },
+  ];
+  return steps.map((s,i)=>`
+    <div class="tl-item">
+      ${i<steps.length-1?'<div class="tl-line"></div>':''}
+      <div class="tl-dot ${s.dot}"></div>
+      <div class="tl-content">
+        <div class="tl-event">${s.label}</div>
+        ${s.dot!=='pending'?`<div class="tl-time">${fmtDateTime(s.time)}</div>`:'<div class="tl-detail" style="color:var(--gray-300)">Pending</div>'}
+      </div>
+    </div>`).join('');
+}
+
+function deleteDispatch(id){
+  openModal('Delete Dispatch',`Permanently delete ${id}? This cannot be undone.`,()=>{
+    dispatches = dispatches.filter(x=>x.id!==id);
+    save(K.dispatches, dispatches);
+    refreshRecordsTable?.();
+    updateExcBadge();
+    toast('Dispatch deleted.','info');
+  });
+}
+
+/* ═══════════════════════════════════════════
+   FORM EVENTS (Dispatch Page)
+═══════════════════════════════════════════ */
+function attachPageEvents(){
+  if(currentPage==='dispatch') attachDispatchEvents();
+  if(currentPage==='records') refreshRecordsTable();
+  if(currentPage==='exceptions') updateExcBadge();
+}
+
+function attachDispatchEvents(){
+  huList = [];
+  const fields = [
+    ['inp-route','f-route'],['inp-vehicle','f-vehicle'],['inp-asn','f-asn'],
+    ['inp-invoice','f-invoice'],['inp-gatepass','f-gatepass'],['inp-seal','f-seal'],
+  ];
+  fields.forEach(([inp,f])=>{
+    const el = document.getElementById(inp);
+    if(!el) return;
+    el.addEventListener('input', ()=>{ document.getElementById(f)?.classList.remove('error'); updateSummary(); });
+    el.addEventListener('change', updateSummary);
+  });
+
+  document.getElementById('inp-hu').addEventListener('keydown', e=>{ if(e.key==='Enter'){e.preventDefault();addHU();} });
+  document.getElementById('btn-add-hu').addEventListener('click', addHU);
+  document.getElementById('btn-save-dispatch').addEventListener('click', saveDispatch);
+  document.getElementById('btn-reset-dispatch').addEventListener('click', ()=>{
+    openModal('Reset Form','Clear all entered data?',()=>{ huList=[]; navigate('dispatch'); toast('Form reset.','info'); },'Reset',false);
+  });
+}
+
+function addHU(){
+  const inp = document.getElementById('inp-hu');
+  const val = inp.value.trim().toUpperCase();
+  if(!val){ inp.focus(); return; }
+  if(huList.includes(val)){ toast(`HU "${val}" already added.`,'error'); inp.select(); return; }
+  huList.push(val);
+  inp.value='';
+  renderHUChips();
+  document.getElementById('f-hu')?.classList.remove('error');
+  updateSummary();
+  inp.focus();
+}
+
+function removeHU(i){
+  huList.splice(i,1);
+  renderHUChips();
+  updateSummary();
+}
+
+function renderHUChips(){
+  const container = document.getElementById('hu-chips');
+  const pill = document.getElementById('hu-count-pill');
+  if(pill) pill.textContent = `${huList.length} scanned`;
+  if(!container) return;
+  document.getElementById('hu-placeholder').style.display = huList.length?'none':'';
+  // Remove old chips
+  [...container.querySelectorAll('.hu-chip')].forEach(c=>c.remove());
+  huList.forEach((code,i)=>{
+    const chip = document.createElement('span');
+    chip.className='hu-chip';
+    chip.innerHTML=`${code}<button onclick="removeHU(${i})" title="Remove">✕</button>`;
+    container.appendChild(chip);
+  });
+}
+
+function updateSummary(){
+  const get = id => { const el=document.getElementById(id); return el?el.value.trim():''; };
+  const set = (id,v,placeholder=false) => {
+    const el=document.getElementById(id);
+    if(el){ el.textContent=v||'—'; el.style.color=v?'var(--gray-900)':'var(--gray-400)'; }
+  };
+  const routeSel = document.getElementById('inp-route');
+  const routeText = routeSel?.options[routeSel?.selectedIndex]?.text;
+  set('sum-route', routeText&&routeSel?.value ? routeText : '');
+  set('sum-vehicle', get('inp-vehicle'));
+  set('sum-asn', get('inp-asn'));
+  set('sum-invoice', get('inp-invoice'));
+  set('sum-gatepass', get('inp-gatepass'));
+  set('sum-seal', get('inp-seal'));
+  const huEl = document.getElementById('sum-hu');
+  if(huEl){ huEl.textContent=`${huList.length} unit${huList.length!==1?'s':''}`; huEl.style.color=huList.length?'var(--accent)':'var(--gray-400)'; }
+}
+
+function validate(){
+  let ok=true;
+  const checks=[
+    ['inp-route','f-route'],['inp-vehicle','f-vehicle'],['inp-asn','f-asn'],
+    ['inp-invoice','f-invoice'],['inp-gatepass','f-gatepass'],['inp-seal','f-seal'],
+  ];
+  checks.forEach(([inp,f])=>{
+    const el=document.getElementById(inp);
+    const missing=!el||!el.value.trim();
+    document.getElementById(f)?.classList.toggle('error',missing);
+    if(missing) ok=false;
+  });
+  const noHU=huList.length===0;
+  document.getElementById('f-hu')?.classList.toggle('error',noHU);
+  if(noHU) ok=false;
+  return ok;
+}
+
+function saveDispatch(){
+  if(!validate()){ toast('Please fill all required fields.','error'); return; }
+  const routeSel = document.getElementById('inp-route');
+  const route = routes.find(r=>r.code===routeSel.value);
+  const record = {
+    id:'DSP'+String(dispatches.length+1).padStart(4,'0'),
+    createdAt: new Date().toISOString(),
+    route: routeSel.value,
+    routeName: route?.name||routeSel.value,
+    vehicle: document.getElementById('inp-vehicle').value.trim().toUpperCase(),
+    asn: document.getElementById('inp-asn').value.trim(),
+    invoice: document.getElementById('inp-invoice').value.trim(),
+    gatepass: document.getElementById('inp-gatepass').value.trim(),
+    seal: document.getElementById('inp-seal').value.trim(),
+    carrier: document.getElementById('inp-carrier').value.trim(),
+    driverName: document.getElementById('inp-driver').value.trim(),
+    driverPhone: document.getElementById('inp-phone').value.trim(),
+    notes: document.getElementById('inp-notes').value.trim(),
+    hu: [...huList],
+    status:'saved',
+  };
+  dispatches.unshift(record);
+  save(K.dispatches, dispatches);
+  toast(`Dispatch ${record.id} saved successfully!`,'success');
+  huList=[];
+  navigate('records');
+}
+
+/* ═══════════════════════════════════════════
+   MISC
+═══════════════════════════════════════════ */
+function updateExcBadge(){
+  const cnt = dispatches.filter(d=>d.status==='exception').length;
+  const badge = document.getElementById('exc-badge');
+  const dot = document.getElementById('notif-dot');
+  if(badge){ badge.textContent=cnt; badge.style.display=cnt?'':'none'; }
+  if(dot) dot.style.display=cnt?'':'none';
+}
+
+function updateTopbarDate(){
+  document.getElementById('topbar-date').textContent = new Date().toLocaleDateString('en-IN',{weekday:'short',day:'numeric',month:'short',year:'numeric'});
+}
+
+/* ═══════════════════════════════════════════
+   INIT
+═══════════════════════════════════════════ */
+updateTopbarDate();
+// responsive menu toggle visibility
+if(window.innerWidth<=900) document.getElementById('menu-toggle').style.display='flex';
+window.addEventListener('resize',()=>{ document.getElementById('menu-toggle').style.display=window.innerWidth<=900?'flex':'none'; });
+navigate('dashboard');
+</script>
+</body>
+</html>

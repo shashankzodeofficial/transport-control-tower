@@ -1,0 +1,1 @@
+export { AlertsCenter } from './AlertsCenter'

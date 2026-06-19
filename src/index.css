@@ -1,0 +1,83 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ─── CSS Custom Properties (design tokens) ─────────────────────────────── */
+
+:root {
+  --color-brand-primary: #1E3A5F;
+  --color-brand-accent:  #3B82F6;
+  --color-brand-surface: #0F172A;
+
+  --color-success: #16A34A;
+  --color-warning: #D97706;
+  --color-danger:  #DC2626;
+  --color-info:    #2563EB;
+
+  --nav-width:           220px;
+  --nav-collapsed-width: 56px;
+  --topnav-height:       56px;
+  --breadcrumb-height:   36px;
+  --pageheader-height:   52px;
+  --tabstrip-height:     44px;
+}
+
+/* ─── Base resets ────────────────────────────────────────────────────────── */
+
+@layer base {
+  *, *::before, *::after {
+    box-sizing: border-box;
+  }
+
+  html {
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  body {
+    @apply bg-slate-50 text-slate-800;
+    margin: 0;
+    padding: 0;
+  }
+
+  /* Scrollbar styling */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    @apply bg-transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    @apply bg-slate-300 rounded-full;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-slate-400;
+  }
+}
+
+/* ─── Utility classes ────────────────────────────────────────────────────── */
+
+@layer utilities {
+  /* Warehouse screen: larger touch targets + font */
+  .warehouse-mode {
+    font-size: 15px;
+    line-height: 1.6;
+  }
+  .warehouse-mode button,
+  .warehouse-mode [role="button"] {
+    min-height: 48px;
+    min-width: 48px;
+  }
+
+  /* Number font variant for KPI values */
+  .font-numeric {
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* Truncate with title tooltip */
+  .truncate-title {
+    @apply truncate;
+  }
+}
