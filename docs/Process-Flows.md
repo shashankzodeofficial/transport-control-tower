@@ -1,325 +1,440 @@
 # Process Flows
 ## Transport Control Tower (TCT)
 
-**Version:** 1.0  
+**Version:** 2.0 — Full Module Audit
 **Last Updated:** 2026-06-19
 
-This document describes the end-to-end operational processes handled by the TCT platform, from dispatch creation through final reconciliation.
+This document describes every operational workflow in the TCT platform with step-by-step flows, decision points, and module responsibilities.
 
 ---
 
-## 1. End-to-End Dispatch Lifecycle
+## 1. End-to-End Dispatch Lifecycle (14 Stages)
 
 ```
-LOAD PLANNING          DISPATCH MANAGEMENT         EXECUTION             RECONCILIATION
-─────────────          ───────────────────         ─────────             ───────────────
-  Pending Load    →    New Dispatch Created   →    Gate-Out         →    Arrives at Hub
-  Vehicle Matched      [status: planned]            [dispatched]         [status: arrived]
-  Load Plan Created    Documents Attached           
-                       [status: ready]         →    In Transit       →    Unloading Starts
-                                                    [status: transit]     [status: unloading]
-                                                    
-                                                    ↓ (exception?)        ↓
-                                                    Exception Raised      HU Count Verified
-                                                    Operator Assigned     Variance Noted
-                                                    Escalate/Resolve      
-                                                                     →    Reconciled
-                                                                          [status: reconciled]
-                                                                     →    Closed
-                                                                          [status: closed]
+LOAD PLANNING           ORIGIN OPS (Hub)          TRANSIT              DESTINATION OPS           CLOSURE
+─────────────           ────────────────          ───────              ───────────────           ───────
+Pending Load       →    [1] planned           →   [6] dispatched  →   [9] gate_in_dest     →   [13] reconciled
+Vehicle Matched         [2] ready                 [7] in_transit      [10] dock_assigned        [14] closed
+Load Plan Created       [3] gate_in_origin         [8] arrived_dest    [11] unloading
+                        [4] loading                                     [12] received
+                        [5] gate_out_origin
 ```
+
+### 1.1 Origin Phase (Stages 1–5)
+- **Planned** — Load plan confirmed; dispatch record created
+- **Ready** — Documents attached (LR, E-waybill, Gate Pass, seal number); driver assigned; carrier confirmed
+- **Gate In Origin** — Vehicle arrives at hub; gate-in registered; dwell clock starts
+- **Loading** — Bay assigned; cargo loaded onto vehicle; loadedHUs tracked per HU scan
+- **Gate Out Origin** — Loading complete; seal applied; gate-out clearance given; E-waybill activated; SLA clock starts
+
+### 1.2 Transit Phase (Stages 6–8)
+- **Dispatched** — Dispatch status confirmed; carrier notified; vehicle departs hub
+- **In Transit** — Active transit monitoring via Operations CT; speed, fuel, location tracked
+- **Arrived Dest.** — Vehicle reaches destination; arrival logged
+
+### 1.3 Destination Phase (Stages 9–12)
+- **Gate In Dest.** — Destination gate-in registered
+- **Dock Assigned** — Unloading bay allocated (D-01 through D-10)
+- **Unloading** — HUs scanned off vehicle; receivedHUs, damagedHUs, shortHUs updated
+- **Received** — All HUs accounted for; receipt confirmed; POD captured; variance logged
+
+### 1.4 Closure Phase (Stages 13–14)
+- **Reconciled** — HU count vs manifest reconciled; financial variances computed; approved
+- **Closed** — Final sign-off; freight cost locked; record archived
 
 ---
 
 ## 2. Dispatch Creation Flow
 
 ### Trigger
-A pending load requires vehicle assignment and dispatch scheduling.
+A pending load requires vehicle assignment.
 
-### Steps
+### Step-by-Step
 
-**Step 1 — Load Planning Workbench (`/load-planning`)**
-1. Planner opens Pending Loads tab
-2. Identifies a load by priority (Critical → High → Normal)
-3. Reviews load details: route, weight, volume, deadline
-4. Switches to Available Vehicles tab
-5. Selects a vehicle with sufficient capacity and correct location
-6. Creates a Load Plan linking vehicle to load
-7. Confirms the plan (status: `confirmed`)
+**Step 1 — Load Planning (`/load-planning`)**
+1. Planner views Pending Loads tab (sorted: Critical → High → Normal → earliest deadline)
+2. Reviews load: route, weight, volume, priority, deadline
+3. Switches to Available Vehicles tab
+4. Selects vehicle with matching capacity, availability = `available`, and location near origin
+5. Creates Load Plan: links load IDs + vehicle ID, sets plannedDeparture, plannedArrival, routeCode, estimated freightCost
+6. Confirms plan → status: `confirmed`
 
 **Step 2 — Dispatch Workbench (`/dispatch/board`)**
-1. Confirmed load plan triggers creation of a Dispatch record (status: `planned`)
-2. Planner / CT operator opens the new dispatch
-3. Attaches documents: LR number, E-waybill, Invoice numbers, Gate Pass, Seal number
-4. Assigns driver and confirms carrier
-5. Moves dispatch to `ready` status
+1. Confirmed plan triggers new Dispatch record with status: `planned`
+2. CT operator opens dispatch → attaches: LR number, E-waybill, invoice numbers, gate pass, seal number
+3. Assigns driver; confirms carrier → status: `ready`
 
-**Step 3 — Gate-Out**
-1. Hub operations confirms gate-out
-2. Dispatch moves to `dispatched` status
-3. Actual departure time recorded
-4. E-waybill activated
+**Step 3 — Hub Operations (`/hub-ops`)**
+1. Vehicle arrives → `arrived` status; hub ops starts gate-in process
+2. Gate-in registered → `gate_in`; dwell clock starts
+3. Loading bay assigned; loading commences → `loading`; loadedHUs updates per scan
+4. All HUs loaded; seal applied → `loaded`; gate-out documentation prepared
+5. Gate-out cleared → `gate_out`; dispatch status → `dispatched`; E-waybill activated
 
-**Step 4 — In Transit**
-1. Dispatch status moves to `transit`
-2. SLA clock starts ticking (based on `slaTotalHours`)
-3. Control tower monitors via Executive CT and Operations CT
+**Step 4 — Transit (`/operations` or `/lifecycle`)**
+1. Vehicle status → `in_transit`; SLA clock starts based on slaTotalHours
+2. CT monitors via Operations CT fleet board and Dispatch Lifecycle Tracker
+3. GPS pings update currentLocation, speedKmh, fuelPct, progressPct
 
 ---
 
 ## 3. SLA Monitoring and Breach Flow
 
-### SLA Status Lifecycle
+### SLA Status Transitions
 
 ```
-[transit]
-    │
-    ├── slaHoursRemaining > 4h         → slaStatus: ok
-    ├── slaHoursRemaining 0–4h         → slaStatus: at-risk
-    │       └── Alert fired: SLA_BREACH (high severity)
-    │       └── CT Operator notified via Alert Rail
-    └── slaHoursRemaining < 0          → slaStatus: breached
-            └── Alert fired: SLA_BREACH (critical severity)
-            └── Exception auto-raised: SLA_BREACH
-            └── Escalation computed from delayMins
+Dispatch: in_transit
+         │
+         ├── hoursToPlannedArrival > 4h    → slaStatus: ok        (no alert)
+         │
+         ├── hoursToPlannedArrival 0–4h    → slaStatus: at-risk
+         │       Alert fired: SLA_BREACH (HIGH severity)
+         │       CT Operator sees alert in Global Alert Rail
+         │
+         └── hoursToPlannedArrival < 0     → slaStatus: breached
+                 Alert fired: SLA_BREACH (CRITICAL severity)
+                 Exception auto-raised: category = 'SLA Breach'
+                 Escalation computed from delayMins:
+                   ≥ 2h → escalationLevel 1 (Regional Manager)
+                   ≥ 4h → escalationLevel 2 (Transport Head)
+                   ≥ 8h → escalationLevel 3 (Control Tower)
 ```
 
-### Escalation Rules
+### SLA Watch Colour Logic
+- `at-risk` → amber badge, `+X.Xh remaining`
+- `breached` → red badge, `+X.Xh overdue`
 
-| Delay       | Escalation Level   | Action Required                             |
-|-------------|--------------------|---------------------------------------------|
-| ≥ 2 hours   | Regional Manager   | Alert sent to regional manager              |
-| ≥ 4 hours   | Transport Head     | Transport head notified, carrier on watch   |
-| ≥ 8 hours   | Control Tower      | Control tower takes direct ownership        |
-
-### Alert Acknowledgement Flow
-
-1. Alert appears in CT Alerts (`/alerts`) and in the Global Alert Rail
-2. Operator opens alert detail
-3. Selects an action from: Carrier Escalated / Alternate Vehicle / Route Changed / Delivery Replanned / Driver Contacted / Hub Escalated / Customer Escalated / Monitoring Only
-4. Enters free-text remarks
-5. Submits acknowledgement → `acknowledged = true`, `ackedAt` recorded
-6. Alert badge count on nav decrements
+### Alert Acknowledgement Workflow
+1. Alert appears in CT Alerts (`/alerts`) and Global Alert Rail (bell icon)
+2. CT operator opens alert
+3. Selects action: `carrier_escalated` / `alternate_vehicle` / `route_changed` / `delivery_replanned` / `driver_contacted` / `hub_escalated` / `customer_escalated` / `monitoring_only`
+4. Enters free-text `ackRemarks`
+5. Submits → `acknowledged = true`, `ackedAt` recorded, `ackedBy` set
+6. Alert badge count on nav decrements; rail removes from unread
 
 ---
 
-## 4. Hub Operations Flow
+## 4. Exception Management Flow
 
-### Inbound Vehicle Flow (`/hub-ops`)
+### Raise Exception
+
+**Trigger:** System auto-detect (SLA engine, GPS, weighbridge, temperature sensor) or manual operator raise
+
+1. Exception created with: category, subcategory?, severity, dispatchId, carrier, vehicleReg, origin, destination
+2. Status: `OPEN`; escalationLevel: 0; raisedBy set; slaBreachAt computed (24h default)
+3. Alert fired: `ESCALATED_EXCEPTION` (if critical) or `HIGH_RISK` (if high)
+4. Appears in Exception Board (`/exceptions`)
+
+### Assignment
+1. CT operator views OPEN exceptions in Exception Board
+2. Clicks "Assign to Me" → assignee set, assigneeTeam set, status → `ASSIGNED`
+3. Or uses "Assign To" dropdown in Raise modal for direct assignment
+
+### Investigation
+1. Operator contacts carrier / driver; reviews GPS data, documents
+2. Records findings in activity comment (type: `note`)
+3. Status → `IN_PROGRESS`
+4. If awaiting information from carrier or field → status → `PENDING_INFO`
+
+### Escalation
+1. If not resolved within threshold → escalation triggered manually or by SLA engine
+2. escalationLevel incremented (1 → 2 → 3)
+3. Status → `ESCALATED`
+4. Comment added (type: `escalation`) with approver notified
+
+### Resolution
+1. Operator documents root cause (`rootCause` field)
+2. Adds resolution note (`resolutionNote`)
+3. Clicks "Resolve" → status: `RESOLVED`; resolvedAt set; resolutionTime computed
+4. Finance approves if financial impact involved
+5. Status → `CLOSED`
+
+### Auto-Resolution
+1. Underlying condition resolves without operator action (e.g. GPS resumes, vehicle moves)
+2. System sets status → `AUTO_RESOLVED` automatically
+
+### Exception KPI Computation
+```typescript
+totalOpen      = filter(e => not in [RESOLVED, CLOSED, AUTO_RESOLVED]).length
+critical       = totalOpen.filter(e => e.severity === 'critical').length
+slaBreached    = totalOpen.filter(e => e.slaBreachAt && slaBreachAt < now).length
+escalated      = totalOpen.filter(e => e.escalationLevel > 0).length
+resolvedToday  = closed.filter(e => resolvedAt within last 24h).length
+avgResolutionH = mean(closed.resolutionTime in minutes) / 60
+```
+
+---
+
+## 5. Hub Operations Flow (Origin)
+
+### Gate-In to Gate-Out Process
 
 ```
 Vehicle Approaches Hub
          │
          ▼
-    ARRIVED (waiting in yard)
-    KPI: Waiting++
+    [arrived] — Waiting in yard
+    arrivedAt recorded; turnaround clock starts
          │
-         ▼ Gate-In registered
-    GATE_IN
-    KPI: Gate-In++
-    Dwell clock starts
+         ▼ Gate-in registered
+    [gate_in] — At dock / pre-staging area
+    gateInAt recorded; dwell clock starts
+    Priority visible: normal / urgent / delayed
          │
-         ▼ Loading bay assigned
-    LOADING
-    KPI: Loading++
-    Loading clock starts
+         ▼ Dock and loading bay assigned
+    [loading] — Cargo being loaded
+    loadingStartAt recorded
+    loadedHUs updates per scan (progress bar: loadedHUs/plannedHUs)
+    Urgent priority: 3 workers, expedited
          │
          ▼ All HUs loaded, seal applied
-    LOADED
-    KPI: Loaded++
-    Gate-out pending
+    [loaded] — Loading complete, gate-out pending
+    loadingCompleteAt recorded; loadingTimeMins computable
+    Documents: gate pass prepared, E-waybill number confirmed
          │
-         ▼ Gate-out done
-    Gate-Out → Dispatch status moves to DISPATCHED
+         ▼ Documentation cleared
+    [gate_out] — Vehicle exiting hub
+    gateOutAt recorded; hubDwellMins computable
+    E-waybill activated
+         │
+         ▼ Departure confirmed
+    [dispatched] — Vehicle departed
+    dispatchedAt recorded; turnaroundMins computable
+    Dispatch status → dispatched; SLA clock starts
 ```
 
-**Delay Flag:** If a vehicle remains in GATE_IN or LOADING beyond the configured threshold, `isDelayed()` returns true and a delay badge appears on the vehicle card.
+### Delay Detection
+- `isDelayed(v)` = `plannedDeparture < now` AND status not in [`gate_out`, `dispatched`]
+- Delayed vehicles show red accent and priority = `delayed`
 
-**Key Metrics:**
-- **Dwell Time** (`hubDwellMins`): Time from gate-in to gate-out
-- **Loading Time** (`loadingTimeMins`): Time from LOADING to LOADED
-- **Turnaround Time** (`turnaroundMins`): Total time from ARRIVED to gate-out
+### Key Metrics
+- **Hub Dwell Time**: `hubDwellMins` = gateOutAt − gateInAt (target: ≤ 120 minutes)
+- **Loading Time**: `loadingTimeMins` = loadingCompleteAt − loadingStartAt
+- **Turnaround Time**: `turnaroundMins` = dispatchedAt − arrivedAt
+
+### Vehicle Types and Special Handling
+- **Reefer** — Cold chain temperature verification required before gate-out
+- **Trailer** — Requires wider bay; dock assignment checks bay clearance
+- **LCV** — Fast turnaround; often prioritised for short-haul routes
 
 ---
 
-## 5. Destination Operations Flow
+## 6. Destination Operations Flow
 
-### Inbound Delivery Flow (`/dest-ops`)
+### Inbound Arrival to Closure
 
 ```
-Dispatch In Transit
+Vehicle Approaching
+    departedOriginAt known; ETA trackable
          │
-         ▼ Vehicle approaches
-    APPROACHING
-    Expected arrival time visible
+         ▼ Vehicle arrives at destination gate
+    [arrived] — at destination premises
+    arrivedAt recorded
+    isOverdue flag = plannedArrival < now
+    Priority: urgent or sla_breach vehicles flagged red
          │
-         ▼ Vehicle arrives at delivery point
-    ARRIVED (status: arrived)
-    Overdue flag if past expected arrival
+         ▼ Gate clearance done
+    [gate_in] — Entered destination premises
+    gateInAt recorded
+    exceptionCount visible on card
          │
-         ▼ Dock assigned, unloading begins
-    UNLOADING (status: unloading)
-    Dock number recorded
+         ▼ Dock bay allocated
+    [dock_assigned] — Bay assigned (D-01 to D-10)
+    dockAssignedAt recorded; dockNumber set
          │
-         ▼ All HUs unloaded, count verified
-    COMPLETED
-    POD captured
-    HU variance calculated (expected vs received)
-    Dispatch moves to: reconciled / needs exception
+         ▼ Unloading begins
+    [unloading] — HUs being offloaded
+    unloadingStartAt recorded
+    receivedHUs updates per scan
+    damagedHUs and shortHUs updated as found
+         │
+         ▼ All HUs off vehicle
+    [unloaded] — Vehicle cleared
+    unloadingCompleteAt recorded
+    dockDwellMins and unloadingTimeMins computable
+         │
+         ▼ Count verified, signed off by supervisor
+    [receipt_confirmed] — POD captured
+    receiptConfirmedAt recorded
+    huVariance = receivedHUs − plannedHUs
+    If shortage: shortHUs > 0 → exception raised; reconciliation flagged
+    If damage: damagedHUs > 0 → exception raised
+         │
+         ▼ Reconciliation complete
+    [reconciled] — Variances documented in ReconciliationRecord
+    reconciledAt recorded
+         │
+         ▼ Final sign-off
+    [closed] — Record archived
+    closedAt recorded; totalCycleMins computable
 ```
 
-**HU Variance:**
-- If `receivedHUs === expectedHUs` → pass, proceed to reconciliation
-- If `receivedHUs < expectedHUs` → shortage exception raised
-- If `receivedHUs > expectedHUs` → overage noted, investigated
+### HU Variance Rules
+- `receivedHUs === plannedHUs` → clean delivery; proceed to reconciliation
+- `receivedHUs < plannedHUs` → shortage; raise HU Missing exception; financial impact = unit value × shortage count
+- `receivedHUs > plannedHUs` → overage; investigate for undeclared load; raise Weight Mismatch exception if needed
+- `damagedHUs > 0` → HU Damaged exception raised; photo evidence required; carrier deduction planned
 
 ---
 
-## 6. Exception Management Flow
+## 7. Reconciliation Center Flow
 
-### Exception Lifecycle
-
-```
-OPEN → ASSIGNED → IN_PROGRESS → [RESOLVED / ESCALATED / PENDING_INFO]
-                                       │
-                                       ▼
-                                    CLOSED / AUTO_RESOLVED
-```
-
-### Step-by-Step
-
-**Raise Exception**
-1. Exception raised by: System (auto, e.g. SLA breach) or Operator (manual)
-2. Category assigned (e.g. `VEHICLE_BREAKDOWN`)
-3. Severity assessed (`critical` / `high` / `medium`)
-4. Exception enters `OPEN` state
-
-**Assignment**
-1. CT operator views open exceptions in Exception Board (`/exceptions`)
-2. Assigns exception to themselves or another operator
-3. Status moves to `ASSIGNED`
-
-**Investigation**
-1. Operator contacts carrier / driver
-2. Records root cause
-3. Status moves to `IN_PROGRESS`
-
-**Escalation Path (if needed)**
-1. If not resolved within threshold → status moves to `ESCALATED`
-2. Escalation level promoted per delay minutes
-3. Manager notified
-
-**Resolution**
-1. Operator documents resolution action
-2. Status moves to `RESOLVED`
-3. After validation → `CLOSED`
-
-**Auto-Resolution**
-1. If the underlying condition resolves (e.g. vehicle moves after breakdown) without operator action → `AUTO_RESOLVED`
-
----
-
-## 7. Reconciliation Flow
-
-### Post-Delivery Reconciliation (`/reconciliation`)
+### Post-Delivery Reconciliation
 
 ```
-Dispatch Arrives & Unloaded
+Dispatch Status: arrived/unloading
          │
          ▼
-Reconciliation Record Created (status: pending)
+ReconciliationRecord auto-created
+    status: pending
+    huLoaded, weightLoaded, freightCost populated from dispatch
+    huArrived = 0; huDamaged = 0; huMissing = 0 (pending)
          │
          ▼ Operator opens record
-In Progress
-    - Compare expected HUs vs received HUs
-    - Compare expected weight vs received weight
-    - Review invoice vs POD
+    status: in_progress
+    Compares: huLoaded vs huArrived
+    Compares: weightLoaded vs weightArrived
+    Reviews: invoice vs POD
          │
-         ├── No variance → COMPLETED
+         ├── No variance (or within tolerance ≤ 2 kg weight)
+         │       discrepancies = []
+         │       status → approved
+         │       approvedBy, approvedAt set
+         │       status → closed; signedOffAt set
          │
-         └── Variance found:
-                  ├── Shortage → raise Shortage Exception
-                  ├── Damage  → raise Damage Exception
-                  └── Dispute → status: DISPUTED
-                                  │
-                                  ▼ After resolution
-                                COMPLETED
+         └── Variance found
+                 discrepancy added: { huCode, type, description, financialImpact, status: 'open' }
+                 status → discrepancy
+                 │
+                 ├── Discrepancy accepted (e.g. minor damage, acknowledged)
+                 │       discrepancy.status → 'accepted'
+                 │       Carrier deduction calculated
+                 │       status → approved → closed
+                 │
+                 ├── Discrepancy waived (e.g. packaging only, contents intact)
+                 │       discrepancy.status → 'waived'
+                 │       financialImpact = 0
+                 │       status → approved → closed
+                 │
+                 └── Discrepancy disputed (carrier disagrees)
+                         discrepancy.status → 'disputed'
+                         status remains: discrepancy (overdue risk)
+                         Physical recount or investigation
+                         After resolution → status → approved → closed
 ```
 
-**Financial Summary:**
-- Freight cost locked to dispatch record
-- Shortage value = (shortage HU count × per-unit value)
-- Damage value estimated by field team
-- Disputed amount held pending investigation
+### Financial Reconciliation Logic
+- Missing HU: financialImpact = estimated cargo value
+- Damaged HU: financialImpact = damage assessment (field team)
+- Weight variance > 2 kg: raise weight_variance discrepancy; financialImpact = freight rate × excess kg
+- Waived items: financialImpact set to 0; no carrier deduction
 
 ---
 
-## 8. Global Filter Flow
+## 8. Alert Center Flow
 
-The global filter bar appears at the top of every page. Changing a filter immediately updates all visible data with no page reload.
+### Alert Lifecycle
 
 ```
-User Changes Region or Date Range
+Condition Detected (SLA breach / exception / reconciliation overdue / integration failure)
          │
          ▼
-GlobalFilterBar dispatches action to FilterContext
+AlertContext.addAlert({ type, severity, message, dispatchId?, routeCode?, ... })
+         │
+         ├── severity === 'critical'
+         │       Global Alert Rail auto-opens
          │
          ▼
-FilterContext updates state via useReducer
+Alert appears in:
+    - Global Alert Rail (bell icon, slide-over panel)
+    - CT Alerts page (/alerts), sorted by severity → firedAt
+    - Nav sidebar badge count increments
+         │
+         ▼ CT Operator acknowledges
+    acknowledged = true
+    ackedAt = now
+    ackedBy = operator name
+    ackAction = selected action
+    ackRemarks = free-text
          │
          ▼
-All components subscribed via useActiveFilters() re-render:
-    ├── useMemo [region, dateRange] → recomputes baseList
-    ├── Downstream useMemos → recompute filtered, KPIs, badge counts
-    └── Charts, tables, KPI cards all reflect new data
+Alert Rail unread count decrements
+Nav sidebar badge decrements
+Alert record retains ackAction + ackRemarks for audit
 ```
 
-**What updates:**
-- All KPI cards and KPI strips
-- All data tables (with new row counts)
-- All charts and sparklines
-- All status tab badge counts
-- Dispatch Funnel counts
-- Exception counts
-- Alert counts
+### Alert Type → Module Routing
 
-**What does NOT update:**
-- Analytics tab charts (pre-aggregated static data in v1.0)
-- Master data screens (configuration, not operational data)
+| Alert Type | Nav Badge Module |
+|---|---|
+| `SLA_BREACH` | Alerts (CT Alerts page) |
+| `HIGH_RISK` | Operations CT |
+| `ESCALATED_EXCEPTION` | Exception Board |
+| `OVERDUE_RECONCILIATION` | Reconciliation Center |
+| `INTEGRATION_FAILURE` | Admin / IT |
+
+### Closure SLA
+- Target: acknowledge and close alert within 240 minutes
+- Avg actual: 142 minutes; P90: 310 minutes
+- Fastest closure by action: `driver_contacted` (38 min avg)
+- Slowest closure by action: `customer_escalated` (290 min avg)
 
 ---
 
-## 9. Alert Rail Flow
+## 9. Global Filter Propagation Flow
 
-The Global Alert Rail is a slide-over panel accessible from the bell icon in the top navigation bar.
+### Filter Change → UI Update
 
 ```
-New Alert Added (via AlertContext.addAlert)
-         │
-         ├── If severity === 'critical' → Rail auto-opens
+User selects Region or Date Range in GlobalFilterBar (top navigation)
          │
          ▼
-Rail shows unread alerts sorted by severity → firedAt
+GlobalFilterBar dispatches action to FilterContext (useReducer)
+    SET_REGION: { region: 'north' | 'south' | 'east' | 'west' | '' }
+    SET_DATE_PRESET: { preset: '7d' | 'today' | 'yesterday' | '30d' | 'month' }
+    SET_DATE_RANGE: { from: Date, to: Date, preset: 'custom' }
          │
          ▼
-Operator clicks alert → opens full CT Alerts page (/alerts)
+FilterContext state updates; all consumers re-render
          │
          ▼
-Operator acknowledges → alert removed from unread count
+Each module calls useActiveFilters() → reads { region, dateRange, from, to }
+    matchesRoute(routeCode) = !region || routeOriginRegion(routeCode) === region
+    matchesCity(city)       = !region || cityRegion(city) === region
+    matchesDate(isoString?) = !from || !to || matchesDateRange(isoString, from, to)
          │
          ▼
-Nav sidebar badge for affected module decrements
+Module useMemo([region, dateRange]) recomputes:
+    baseList = fullList.filter(item => matchesX(...) && matchesDate(...))
+         │
+         ▼
+Downstream useMemos recompute:
+    filtered list (local tab + search filters applied to baseList)
+    KPI cards (derived from baseList)
+    Tab badge counts (per-status count from baseList)
+    Charts (derived from baseList)
+         │
+         ▼
+React re-renders all affected components synchronously
+No page reload; no loading state
 ```
 
-**Module → Alert Type Routing:**
+### What Updates on Filter Change
 
-| Alert Type                  | Nav Badge Module |
-|-----------------------------|------------------|
-| `SLA_BREACH`                | alerts           |
-| `HIGH_RISK`                 | operations       |
-| `ESCALATED_EXCEPTION`       | exceptions       |
-| `OVERDUE_RECONCILIATION`    | recon            |
-| `INTEGRATION_FAILURE`       | admin            |
+| Component Type | Updates? |
+|---|---|
+| All KPI strips | Yes |
+| All data tables and row counts | Yes |
+| Tab badge counts | Yes |
+| Dispatch Funnel counts | Yes |
+| Exception counts | Yes |
+| Alert counts | Yes |
+| Route Performance sparklines | Yes (data filtered) |
+| Carrier Performance table | Yes (data filtered) |
+| SLA Heatmap cells | Yes (filtered by route region) |
+| Live Network View | Yes (node selection by region) |
+| Analytics tab charts | No (pre-aggregated static data in v1.0) |
+| Master Data screens | No (configuration, not operational data) |
 
 ---
 
@@ -328,30 +443,100 @@ Nav sidebar badge for affected module decrements
 ### Capacity Matching
 
 ```
-Planner views Pending Loads (sorted: Critical → High → Normal → earliest deadline)
+Planner opens Pending Loads tab (sorted: Critical → High → Normal → earliest deadline)
          │
-         ▼
-For each pending load:
-    - Check weight requirement vs vehicle capacity (kg)
-    - Check volume requirement vs vehicle capacity (cbm)
-    - Check vehicle availability status = 'available'
-    - Check vehicle location matches or is near origin
+For each pending load (assignedVehicleId = null):
+    │
+    ├── Check weight requirement vs vehicle.capacityKg
+    ├── Check volume requirement vs vehicle.capacityM3
+    ├── Check vehicle.availability === 'available'
+    └── Check vehicle.location matches or near origin city
          │
          ▼
 Match found → Create Load Plan
-    - Link load IDs to vehicle ID
-    - Set plannedDeparture, plannedArrival, routeCode
-    - Estimate freightCost
-    - Status: draft → confirmed → dispatched
+    loadIds[] linked to vehicleId
+    plannedDeparture, plannedArrival set
+    routeCode assigned
+    freightCost estimated (costPerKm × distanceKm)
+    status: draft → confirmed → dispatched
          │
          ▼
-Confirmed Load Plan → Dispatch Record Created
+Confirmed Load Plan → Dispatch Record Created (status: planned)
 ```
 
-**KPI Impact (from filtered data):**
-- Available Vehicles: `filter(v => v.availability === 'available').length`
-- Pending Loads: `filter(l => !l.assignedVehicleId).length`
-- Critical Loads: `filter(l => l.priority === 'critical').length`
-- Avg Utilization: mean of `v.utilizationPct` across filtered vehicles
-- In Maintenance: `filter(v => v.availability === 'maintenance').length`
-- Plans Today: `filter(p => p.status !== 'cancelled').length`
+### Load Priority Levels
+- `critical` — Expedite; assign best available vehicle; CT notified
+- `high` — Assign before normal loads; flag if no vehicle within 2h
+- `normal` — Standard first-in-first-out assignment
+
+### KPI Computation (from filtered data)
+```
+Available Vehicles  = baseVehicles.filter(v => v.availability === 'available').length
+In Maintenance      = baseVehicles.filter(v => v.availability === 'maintenance').length
+Pending Loads       = baseLoads.filter(l => !l.assignedVehicleId).length
+Critical Loads      = baseLoads.filter(l => l.priority === 'critical').length
+Avg Utilisation     = mean(baseVehicles.map(v => v.utilizationPct))
+Plans Today         = basePlans.filter(p => p.status !== 'cancelled').length
+```
+
+---
+
+## 11. Executive CT Dashboard Logic
+
+### KPI Scaling
+
+The Executive CT scales count-based KPIs proportionally to the selected date window:
+
+```
+dateScale = Math.round((windowDays / 7) * 100) / 100
+// 7d window → scale = 1.0
+// 30d window → scale = 4.29
+// Today → scale = 0.14
+
+Scaled KPIs = [Active Dispatches, SLA Breaches, Open Exceptions, Pending Reconciliation]
+Unscaled KPIs = [OTD %, Vehicle Util %, Avg Delay, Cost vs Budget]
+
+If region is selected:
+  KPIs derived from REGION_SUMMARY[region] × dateScale
+  avgUtil derived from mean(NETWORK_NODES[region].utilPct)
+  Avg Delay: '1.8' if OTD ≥ 90, '2.4' if OTD ≥ 85, '3.2' otherwise
+```
+
+### Widget Interaction (no deep-link yet in v1.0)
+- All 7 widgets respond to region + date filter independently via `useActiveFilters()`
+- Clicking a KPI does not currently drill down — planned for backend integration phase
+- Refresh button resets the `lastRefresh` timestamp (cosmetic, no data refetch in mock mode)
+- Export button downloads `KPI_DATA` array as CSV regardless of region/date filter (known gap — v2.0 fix planned)
+
+---
+
+## 12. Carrier and Route Performance Scorecard Logic
+
+### Route Grade Computation
+Grade is statically assigned in mock data but will be computed in v2.0 as:
+```
+gradeScore = weighted average of:
+  OTD%         × 0.35
+  SLA%         × 0.25
+  ExceptRate   × 0.20 (inverted: 10 - rate/2, capped 0–10)
+  CostPerKm    × 0.20 (inverted vs benchmark)
+
+A: gradeScore ≥ 85
+B: gradeScore ≥ 70
+C: gradeScore ≥ 55
+D: gradeScore ≥ 40
+F: gradeScore < 40
+```
+
+### Carrier Composite Score
+Computed in v2.0 as weighted average of scoring dimensions:
+```
+compositeScore = weighted average of:
+  OTD%                × 0.30
+  SLA Compliance%     × 0.25
+  Exception Rate      × 0.20 (inverted)
+  Damage Rate%        × 0.15 (inverted)
+  Response Time (mins)× 0.10 (inverted)
+```
+
+Tier boundaries: Platinum ≥ 88, Gold ≥ 75, Silver ≥ 65, Bronze ≥ 55, Probation < 55

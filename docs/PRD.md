@@ -1,269 +1,458 @@
-# Product Requirements Document
+# Product Requirements Document (PRD)
 ## Transport Control Tower (TCT)
 
-**Version:** 1.0  
-**Status:** Active Development  
-**Last Updated:** 2026-06-19  
+**Version:** 2.0 — Full Module Audit
+**Last Updated:** 2026-06-19
 **Owner:** Shashank Zode, Transport Transformation Leader
 
 ---
 
 ## 1. Executive Summary
 
-The Transport Control Tower (TCT) is an internal operations intelligence platform for managing end-to-end freight and logistics operations across India. It provides real-time visibility, exception management, and performance analytics for transport operations spanning four geographic regions — North, South, East, and West.
+The Transport Control Tower (TCT) is a real-time operational intelligence platform for managing outbound road freight across India. It provides end-to-end visibility across the full dispatch lifecycle — from load planning at the origin hub through transit monitoring to final delivery and financial reconciliation.
 
-The platform consolidates data from dispatch planning through final delivery reconciliation into a single unified interface, enabling control tower operators, regional managers, and transport heads to monitor, act on, and analyse every shipment in the network.
+TCT consolidates data from dispatch, fleet, exceptions, alerts, route performance, carrier management, and reconciliation into a single interface with a unified global filter for region and date range.
 
 ---
 
 ## 2. Problem Statement
 
-Prior to TCT, transport operations were managed across disconnected tools — spreadsheets for planning, separate systems for tracking, and manual email chains for exceptions. This created:
-
-- No single source of truth for active dispatch status
-- Delayed exception detection (hours, not minutes)
-- Manual SLA breach identification after the fact
-- No region-level or date-range drill-down capability
-- Carrier and route performance only visible via end-of-month reports
-- Reconciliation done manually, prone to discrepancies
+| Problem | Impact |
+|---|---|
+| No single view of dispatch lifecycle | CT operators check multiple systems per shipment |
+| SLA breaches detected reactively | Penalties and customer notifications arrive late |
+| Exception resolution by phone/email | Root cause untracked; recurring issues repeat |
+| No objective carrier performance score | Underperforming carriers remain on high-value routes |
+| Reconciliation manual and delayed | Financial variance untracked for days after delivery |
+| No region-level filter across data | Managers see all-India noise instead of their region |
 
 ---
 
-## 3. Goals and Non-Goals
+## 3. Goals
 
-### Goals
-- Provide real-time visibility into all active dispatches across all regions
-- Surface SLA breaches and exceptions before they escalate
-- Automate escalation routing based on delay thresholds
-- Give a single global filter (region + date range) that updates all modules simultaneously
-- Enable hub and destination operations teams to manage vehicle arrivals and unloading
-- Produce a performance scorecard for every carrier and route
-- Support full dispatch lifecycle tracking from planning to reconciliation
+### Must-Have (v1.0)
+- Real-time KPI dashboard for Executive and Operations CT users
+- End-to-end 14-stage dispatch lifecycle tracker
+- Fleet live board with vehicle-level detail
+- Exception management: assign, escalate, resolve
+- SLA monitoring with at-risk and breached status
+- Alert center with acknowledgement and action recording
+- Route and carrier performance scorecards
+- Hub operations (origin) and destination operations tracking
+- Post-delivery reconciliation with HU discrepancy recording
+- Global region + date range filter applied across all modules
 
 ### Non-Goals (v1.0)
-- Real backend API integration (current: mock data)
-- Mobile-native application
-- Customer-facing shipment tracking portal
-- EDI / TMS direct integration
-- Financial settlement processing
+- Backend API (all data is in-memory mock)
+- Authentication or RBAC
+- Mobile app
+- GPS live map
+- ERP / financial integration
 
 ---
 
 ## 4. User Personas
 
 ### 4.1 Control Tower Operator
-**Role:** Day-to-day monitor  
-**Needs:** Live view of all dispatches, instant alert triage, exception assignment  
-**Primary modules:** Executive CT, Operations CT, CT Alerts, Exception Management
+- **Modules:** Executive CT, Operations CT, Alerts, Exceptions
+- **Goal:** Identify and respond to SLA risks and exceptions in real time
 
-### 4.2 Regional Manager
-**Role:** Oversees a geographic zone (North / South / East / West)  
-**Needs:** Region-filtered KPIs, SLA trend, carrier performance within region  
-**Primary modules:** Executive CT (filtered), Route Performance, Carrier Performance
+### 4.2 Regional Transport Manager
+- **Modules:** Executive CT (region-filtered), Route Performance, Carrier Performance
+- **Goal:** Meet OTD targets for their region
 
 ### 4.3 Hub Operations Executive
-**Role:** Manages inbound/outbound vehicle flow at a hub  
-**Needs:** Gate-in queue, loading bay status, turnaround time tracking  
-**Primary modules:** Hub Operations, Dispatch Lifecycle
+- **Modules:** Hub Operations, Dispatch Workbench
+- **Goal:** Minimise dwell time and ensure on-time gate-out
 
 ### 4.4 Destination Operations Executive
-**Role:** Manages unloading and handover at delivery points  
-**Needs:** Expected arrivals, dock assignment, unloading status, variance  
-**Primary modules:** Destination Operations
+- **Modules:** Destination Operations
+- **Goal:** Complete unloading within planned time; flag HU variances immediately
 
 ### 4.5 Dispatch Planner
-**Role:** Creates and assigns load plans  
-**Needs:** Pending load queue, available vehicle matching, plan creation  
-**Primary modules:** Load Planning, Dispatch Management
+- **Modules:** Load Planning, Dispatch Workbench, Dispatch Lifecycle
+- **Goal:** Match vehicles to loads; ensure documents are complete before departure
 
-### 4.6 Transport Head
-**Role:** Senior operations leader  
-**Needs:** KPI dashboards, route and carrier scorecards, exception trends  
-**Primary modules:** Analytics, Route Performance, Carrier Performance, Executive CT
+### 4.6 Finance / Reconciliation Analyst
+- **Modules:** Reconciliation Center
+- **Goal:** Close reconciliation within 48 hours of delivery; approve freight payment
 
-### 4.7 Admin / Master Data Manager
-**Role:** Maintains configuration data  
-**Needs:** Route master, carrier master, fleet master, SLA matrix management  
-**Primary modules:** Master Data, Administration
+### 4.7 Transport Head
+- **Modules:** Executive CT, Route Performance, Carrier Performance, Analytics
+- **Goal:** Network OTD ≥ 90%; manage carrier tiers; reduce exception rate
 
 ---
 
-## 5. Feature Requirements
+## 5. Feature Requirements by Module
 
-### 5.1 Global Filter Bar
-- Region selector: All Regions | North | South | East | West
-- Date range presets: Today | Yesterday | Last 7 Days | Last 30 Days | This Month | Custom
-- Filter state persists across navigation within a session
-- All modules, KPI cards, charts, and tables must respond to filter changes without page reload
-- Single source of truth via `FilterContext` (React Context + useReducer)
-- Active filter indicator when non-default selections are applied
-- Reset to defaults button
+### FR-01: Executive Control Tower (`/executive`)
 
-### 5.2 Executive Control Tower (`/executive`)
-- Network-level KPI strip: Total Dispatches, In Transit, On-Time Delivery %, Active Exceptions, Cost per Dispatch
-- Live Network View: geographic node map by region with dispatch counts
-- Dispatch Funnel: planned → ready → dispatched → transit → arrived → unloading → reconciled
-- Route Performance widget: sortable table of top routes with grade badges
-- Carrier Performance widget: tier ranking (Top Performer / Good / Monitor / At Risk)
-- SLA Heatmap: route × carrier breach rate matrix
-- Exception Command Center: live exception list with trend chart
-- Alert Center: unread alert count, critical badge, acknowledge workflow
-- All widgets respond to region and date range filters
+**Purpose:** Real-time network-wide operational snapshot for leadership and CT operators.
 
-### 5.3 Operations Control Tower (`/operations`)
-- Fleet status overview: active vehicles, in-transit, delayed, SLA at-risk
-- SLA Watch table: shipments with planned arrival and breach risk
-- Hub Activity feed: scheduled arrivals and departures by hub
-- KPI strip derived from filtered fleet, SLA, and hub data
+**KPI Strip (8 KPIs):**
 
-### 5.4 Dispatch Management (`/dispatch`)
-- Tabbed status board: All | Planned | Ready | Dispatched | In Transit | Arrived | Unloading | Reconciled | Closed
-- KPI bar: In Transit, SLA At Risk, SLA Breached, Open Exceptions
-- Per-dispatch detail drawer: documents (LR, E-waybill, Invoice, Gate Pass, Seal), HU breakdown, timeline
-- Chain of custody view per dispatch
-- New Dispatch modal
-- CSV export of filtered list
-- All counts reflect global region + date filter
+| Label | Baseline Value | Unit | Status Logic |
+|---|---|---|---|
+| Active Dispatches | 248 | count | healthy if progressing |
+| On-Time Delivery | 87 | % | healthy ≥ 90, warning 75–89, danger < 75 |
+| SLA Breaches | 14 | count | danger if > 0 |
+| Open Exceptions | 37 | count | warning if > 0 |
+| Vehicle Utilisation | 79 | % | healthy ≥ 70, warning 50–69 |
+| Avg Delay | 2.4 | hrs | warning if > 1h |
+| Cost vs Budget | 96 | % | healthy if ≤ 100% |
+| Pending Reconciliation | 31 | count | info |
 
-### 5.5 Transport Execution (`/transport`)
-- Live transport monitor: map-based vehicle position view
-- Real-time status updates
+**KPI Scaling Rules:**
+- Date range scale factor = `days / 7` (7-day window = 1.0 baseline)
+- Count metrics (Active Dispatches, SLA Breaches, Open Exceptions, Pending Reconciliation) multiplied by scale factor
+- Percentage metrics (OTD, Utilisation, Cost) not scaled — taken from region data
+- Region filter replaces network values with per-region values from `REGION_SUMMARY`
 
-### 5.6 Load Planning (`/load-planning`)
-- Pending loads queue with priority sorting (Critical → High → Normal)
-- Available vehicles list with availability filter
-- Load Plans tab: draft, confirmed, dispatched, cancelled plans
-- KPI strip: Available Vehicles, Pending Loads, Critical Loads, Avg Utilization, In Maintenance, Plans Today
-- Capacity by type bar chart
-- New Load Plan modal
-- All data filtered by global region and planned departure date
+**Widgets:**
+1. **Dispatch Funnel** — 7-stage funnel from Planned (312) → Ready (284) → Dispatched (248) → In Transit (201) → Arrived (178) → Unloading (142) → Reconciled (98), with 7-day daily trend bar chart
+2. **Live Network View** — 10 hubs/depots (Delhi, Mumbai, Bangalore, Hyderabad, Chennai, Kolkata, Pune, Ahmedabad, Lucknow, Jaipur) displayed by region with vehicle counts, pending arrivals, exception counts, utilisation %
+3. **Exception Command Center** — 6 live exceptions with category donut (Delay 38%, Document 24%, Breakdown 16%, Route Dev 14%, Customer Refusal 8%), 7-day trend chart, exception table with status / assignee / SLA countdown
+4. **Route Performance** — Table of 10 routes with grade, OTD%, avg delay, dispatch count, exceptions, cost/km, 7-day sparkline, trend direction
+5. **Carrier Performance** — Table of 8 carriers with OTD%, OTA%, open exceptions, composite score, tier badge (Top Performer / Good / Monitor / At Risk), 7-day sparkline
+6. **SLA Heatmap** — Route × carrier matrix (8 routes × 5 carriers = 40 cells) coloured by breach rate %; worst cell highlighted; 7-day SLA trend line
+7. **Alert Center** — Last 7 alerts for this CT with type badge, severity, dispatch/route link, time-ago, acknowledge button
 
-### 5.7 Hub Operations (`/hub-ops`)
-- Per-hub vehicle queue management
-- Gate-in, loading, loaded, gate-out workflow
-- KPIs: Waiting, Gate-In, Loading, Loaded, Delayed, Gate-Out Pending
-- Vehicle detail drawer with dwell time, turnaround, loading time metrics
-- Delay indicator with configurable threshold
-
-### 5.8 Destination Operations (`/dest-ops`)
-- Expected arrivals, dock-in, unloading, POD capture workflow
-- Dock assignment per vehicle
-- HU variance tracking (expected vs received)
-- Overdue indicator for vehicles past expected arrival
-- Status tabs: All | Approaching | Arrived | Unloading | Completed
-
-### 5.9 Dispatch Lifecycle (`/lifecycle`)
-- Kanban-style stage board: planned → gate-in → loaded → dispatched → in-transit → arrived → unloading → completed
-- Timeline drill-down per dispatch
-- Phase grouping: Pre-Dispatch | In-Transit | At Destination
-- SLA status badge per dispatch
-- Filterable by phase, SLA status, search
-
-### 5.10 Exception Management (`/exceptions`)
-- Exception board with severity tabs: All | Critical | High | Medium
-- Workflow states: OPEN → ASSIGNED → IN_PROGRESS → ESCALATED / PENDING_INFO → RESOLVED → CLOSED
-- Raise exception modal
-- Exception detail drawer: root cause, assignee, resolution notes, SLA breach time
-- Auto-escalation based on age and severity
-- Trend chart: exceptions raised vs resolved over time
-
-### 5.11 Reconciliation Center (`/reconciliation`)
-- Reconciliation queue with status: Pending → In Progress → Completed → Disputed
-- HU-level variance (expected vs received weight/count)
-- Resolution workflow
-- Financial summary: freight cost, shortages, overages
-- Trend chart: reconciliation cycle time
-
-### 5.12 Route Performance (`/routes`)
-- Route scorecard with grade A–F
-- KPIs per route: OTA%, OTD%, Avg Delay, Cost/km, Exception Count, Dispatch Count
-- Grade filter tabs
-- Sparkline trend per route
-- Bar chart and donut charts for grade distribution
-
-### 5.13 Carrier Performance (`/carriers`)
-- Carrier ranking with tier: Top Performer | Good | Monitor | At Risk
-- KPIs per carrier: OTA%, OTD%, Open Exceptions, Composite Score, Cost/km
-- Status tabs: All | Active | Watch List
-- Sparkline trend, performance charts
-- Carrier detail drawer
-
-### 5.14 CT Alerts (`/alerts`)
-- Alert types: SLA_BREACH | HIGH_RISK | ESCALATED_EXCEPTION | OVERDUE_RECONCILIATION | INTEGRATION_FAILURE
-- Severity: Critical | High | Medium
-- Acknowledge workflow with action types and remarks
-- Escalation levels driven by delay: 2h+ → Regional Manager, 4h+ → Transport Head, 8h+ → Control Tower
-- Global alert rail (slide-over panel) available from any screen
-- Alert badges on nav sidebar per module
-
-### 5.15 Analytics (`/analytics`)
-- Six analytics tabs: Executive | Operations | Carriers | Routes | Exceptions | Reconciliation
-- Regional filter and date range selector synced with global filter
-- Pre-aggregated KPI summaries and trend charts per domain
-
-### 5.16 Master Data (`/master-data`)
-- Route Master: route codes, origin, destination, distance, SLA hours
-- Fleet Master: vehicle registry, type, carrier assignment
-- Carrier Master: carrier profiles, contracts, performance baseline
-- Hub Master: hub codes, locations, capacity
-- Customer Master: customer profiles, delivery SLA
-- SLA Matrix: SLA rules by route / carrier / load type
-
-### 5.17 Administration (`/admin`)
-- User management
-- Role and permission configuration
-- System settings
+**Business Rules:**
+- KPI values update when region or date range changes
+- `dateScale = Math.round((days/7) * 100) / 100` — rounded to 2 decimal places
+- Region KPIs derived from `REGION_SUMMARY.find(rs => rs.region.toLowerCase() === region)`
+- Avg delay shown as '1.8' / '2.4' / '3.2' based on regional OTD threshold bands
 
 ---
 
-## 6. Permissions Model
+### FR-02: Operations Control Tower (`/operations`)
 
-Each navigation item carries a `permission` key. Planned permission groups:
+**Purpose:** Operational fleet visibility with live vehicle tracking, SLA watch list, and hub activity.
 
-| Permission Key        | Scope                                      |
-|-----------------------|--------------------------------------------|
-| `executive.view`      | Executive CT, KPIs, network view           |
-| `operations.view`     | Operations CT, fleet, SLA watch            |
-| `dispatch.view`       | Dispatch, hub-ops, dest-ops, lifecycle     |
-| `transport.view`      | Transport execution / live monitor         |
-| `planning.view`       | Load planning workbench                    |
-| `exceptions.view`     | Exception management                       |
-| `reconciliation.view` | Reconciliation center                      |
-| `routes.view`         | Route performance                          |
-| `carriers.view`       | Carrier performance                        |
-| `alerts.view`         | CT Alerts center                           |
-| `analytics.view`      | Analytics dashboard                        |
-| `admin.view`          | Master data, administration                |
+**KPI Strip (6 KPIs):**
 
----
+| Label | Description | Status Logic |
+|---|---|---|
+| Active Vehicles | Vehicles not yet arrived | healthy |
+| In Transit | Status = `in-transit` | info |
+| Delayed | Status = `delayed` | danger if > 3, warning otherwise |
+| SLA At-Risk | Filtered SLA_WATCH record count | warning if > 2 |
+| Hub Arrivals Today | HUB_EVENTS arrivals count | healthy |
+| Fleet Utilisation | active / total × 100 | healthy |
 
-## 7. SLA & Escalation Rules
+**Fleet Board:**
+- Vehicle cards showing: registration, driver name, carrier, route, origin → destination, current location, progress bar (%), speed (km/h), fuel %, delay (+Xm badge), alert pills
+- Status types: `in-transit` (blue pulse), `halted` (amber), `delayed` (red), `arrived` (green), `idle` (grey)
+- Fleet tabs: All / In Transit / Delayed / Halted / Arrived — badge counts reflect filtered vehicles
+- Click vehicle → 320px detail panel with all metrics and active alerts
 
-| Delay Threshold | Escalation Target  |
-|-----------------|-------------------|
-| ≥ 2 hours       | Regional Manager   |
-| ≥ 4 hours       | Transport Head     |
-| ≥ 8 hours       | Control Tower      |
+**SLA Watch List Columns:** Dispatch ID, Route Code, Origin → Destination, Carrier, Vehicle Reg, Status (BREACHED / AT RISK), SLA time (hours overdue or remaining)
 
-KPI health thresholds:
+**Hub Activity Feed:**
+- Events show: hub name, vehicle reg, carrier, event type (ARR / DEP), status badge (on-time / early / delayed / pending)
+- Filter toggle: All / Arrival / Departure
+- Scheduled time shown for pending; time-ago shown for completed
 
-| KPI              | Healthy | Warning |
-|------------------|---------|---------|
-| OTD %            | ≥ 90%   | 75–89%  |
-| OTA %            | ≥ 90%   | 75–89%  |
-| SLA Compliance % | ≥ 90%   | 75–89%  |
-| Open Exceptions  | 0       | ≤ 5     |
-| Vehicle Util %   | ≥ 70%   | 50–69%  |
-| Cost/Dispatch    | ≤ ₹3000 | ≤ ₹5000 |
+**Region Filter (custom helpers):**
+- `vehicleRegion(v)` → maps `v.origin` city to region using `CITY_REGION` map
+- `slaRegion(r.origin)` → maps origin city to region
+- `hubRegion(e.hub)` → strips " Hub" suffix and maps city to region
+- Cities covered: Mumbai/Pune/Ahmedabad/Surat/Goa → west; Delhi/Agra/Jaipur/Jodhpur/Lucknow/Indore/Bhopal → north; Bangalore/Chennai/Hyderabad/Vizag → south; Kolkata/Patna/Bhubaneswar → east
 
 ---
 
-## 8. Out-of-Scope for v1.0
+### FR-03: Dispatch Lifecycle Tracker (`/lifecycle`)
 
-- Real-time GPS vehicle tracking integration
-- Carrier API / EDI feeds
-- Automated financial reconciliation with ERP
-- Multi-tenancy
-- Offline / PWA support
+**Purpose:** End-to-end 14-stage timestamp visibility for every active dispatch.
+
+**14 Stages and Phases:**
+
+| Stage | Phase | Colour |
+|---|---|---|
+| Planned | Origin | Blue |
+| Ready | Origin | Blue |
+| Gate In Origin | Origin | Blue |
+| Loading | Origin | Blue |
+| Gate Out Origin | Origin | Blue |
+| Dispatched | Transit | Amber |
+| In Transit | Transit | Amber |
+| Arrived Dest. | Transit | Amber |
+| Gate In Dest. | Destination | Violet |
+| Dock Assigned | Destination | Violet |
+| Unloading | Destination | Violet |
+| Received | Destination | Violet |
+| Reconciled | Closure | Green |
+| Closed | Closure | Green |
+
+**Views:** Table (8 columns) and Kanban (14 columns, one per stage)
+
+**KPI Strip (clickable — sets phase filter):**
+- Total Active, Origin Phase, In Transit, Dest. Phase, Closed Today, At Risk, SLA Breached
+
+**Filters:** Phase (All / Origin / Transit / Destination / Complete), SLA Status, free text search (dispatch ID, vehicle, route code, carrier, origin, destination)
+
+**Timeline Detail Panel:**
+- Route info (routeCode, origin, destination, plannedHUs)
+- Lifecycle progress bar (stage index / 13 × 100%)
+- 14-stage timestamp log (done = green tick, active = blue NOW badge, future = grey)
+- Lifecycle Metrics: Transit Time (gateOutOrigin → arrivedDest, warn > 900m), Total Cycle Time (planned → closed, warn > 2880m)
+- Planned vs Actual comparison for Dispatch and Arrival milestones with variance in minutes
+- Remarks block (amber background)
+
+**SLA Colours:** on_time = green, at_risk = amber, breached = red (row and progress bar)
+
+---
+
+### FR-04: Origin Operations / Hub Operations (`/hub-ops`)
+
+**Purpose:** Manage vehicle flow at origin hubs from arrival through gate-out.
+
+**Vehicle Statuses (in order):**
+`arrived` → `gate_in` → `loading` → `loaded` → `gate_out` → `dispatched`
+
+**Vehicle Card Fields:** vehicleNumber, vehicleType (FTL/LTL/LCV/Trailer/Reefer), carrier, driverName, driverMobile, routeCode, origin, destination, plannedHUs, loadedHUs, weightKg, status, priority (normal/urgent/delayed), arrival/gate-in/loading/gate-out timestamps, plannedDeparture, remarks
+
+**Computed Metrics:**
+- `hubDwellMins` = gateOutAt − gateInAt
+- `loadingTimeMins` = loadingCompleteAt − loadingStartAt
+- `turnaroundMins` = dispatchedAt − arrivedAt
+- `isDelayed()` = plannedDeparture < now AND status not in [gate_out, dispatched]
+
+**Loading Progress:** `loadedHUs / plannedHUs × 100%` shown as bar
+
+**Hubs:** Delhi (north), Mumbai (west), Bangalore (south), Kolkata (east), Hyderabad (south), Chennai (south)
+
+**Business Rules:**
+- Urgent priority vehicles highlighted for expedited processing
+- Delayed priority vehicles show red accent and remarks
+- Reefer vehicles require cold chain temp confirmation before gate-out
+
+---
+
+### FR-05: Destination Operations (`/dest-ops`)
+
+**Purpose:** Manage inbound vehicle arrivals, docking, unloading, and receipt confirmation at destination.
+
+**Vehicle Statuses (in order):**
+`in_transit` → `arrived` → `gate_in` → `dock_assigned` → `unloading` → `unloaded` → `receipt_confirmed` → `reconciled` → `closed`
+
+**Vehicle Detail Fields:** vehicleNumber, vehicleType, carrier, driverName, driverMobile, routeCode, origin, destination, dockNumber, plannedHUs, receivedHUs, damagedHUs, shortHUs, weightKg, priority (normal/urgent/sla_breach), all 9 status timestamps, plannedArrival, exceptionCount, remarks
+
+**Computed Metrics:**
+- `transitTimeMins` = arrivedAt − departedOriginAt
+- `dockDwellMins` = unloadingCompleteAt − dockAssignedAt
+- `unloadingTimeMins` = unloadingCompleteAt − unloadingStartAt
+- `totalCycleMins` = closedAt − arrivedAt
+- `huVariance` = receivedHUs − plannedHUs (negative = shortage, positive = overage)
+- `isOverdue()` = plannedArrival < now AND status not in [reconciled, closed]
+
+**Dock Numbers:** D-01 through D-10
+
+**Business Rules:**
+- Priority `sla_breach` vehicles shown with red accent
+- Reefer vehicles require cold chain acknowledgement
+- Short HUs trigger exception count increment and reconciliation flag
+- Overdue flag triggers visual alert on vehicle card
+
+---
+
+### FR-06: Exception Management (`/exceptions`)
+
+**Purpose:** Centralised exception lifecycle from detection through resolution with financial impact tracking.
+
+**Exception Categories (from Raise modal):**
+SLA Breach, Delivery Delay, Vehicle Breakdown, Document Issue, Customer Complaint, Damage in Transit, Short Shipment, Address Change, Other
+
+**Exception Data Categories (from mock data):**
+SLA Breach, HU Missing, Vehicle Breakdown, HU Damaged, Route Deviation, Gate Hold, Weight Mismatch, Delayed Dispatch, Temp Deviation (Cold Chain Breach), Doc Missing
+
+**Status Flow:** OPEN → ASSIGNED → IN_PROGRESS → ESCALATED / PENDING_INFO → RESOLVED → CLOSED / AUTO_RESOLVED
+
+**Tab Grouping Logic:**
+- "Open" tab = OPEN + ASSIGNED + PENDING_INFO
+- "In Progress" tab = IN_PROGRESS
+- "Escalated" tab = ESCALATED
+- "Resolved" tab = RESOLVED + CLOSED + AUTO_RESOLVED
+
+**Detail Panel Sections:** Dispatch Info, SLA Clock, Assignment (assignee, team, escalation level), Financial Impact (INR), Root Cause, Resolution Note + time, Tags, Activity comment thread
+
+**Comment Types:** note (blue), escalation (orange), resolution (green), system (grey)
+
+**KPI Cards:**
+- Total Open, Critical, SLA Breached, Escalated, Resolved Today, Avg Resolution (hours)
+- Status: danger if Critical > 0 or SLA Breached > 0; warning if Escalated > 0
+
+**Analytics Panel (toggleable):**
+- Category donut (6 categories with counts)
+- 7-day trend line (Opened / Resolved / Escalated)
+- Financial Impact bar chart by category (₹ amounts)
+
+**Region Filter:** `matchesCity(ex.origin)` using `cityRegion()` function
+**Date Filter:** `matchesDate(ex.raisedAt)`
+
+---
+
+### FR-07: Reconciliation Center (`/reconciliation`)
+
+**Purpose:** Post-delivery HU count reconciliation, discrepancy management, and freight payment approval.
+
+**Reconciliation Statuses:**
+- `pending` — dispatched, not yet arrived
+- `in_progress` — arrived, scanning in progress
+- `discrepancy` — variances found, pending sign-off
+- `approved` — finance approved
+- `closed` — fully reconciled
+
+**HU Discrepancy Types:** missing / damaged / extra / wrong_item / weight_variance
+
+**Discrepancy Status:** open / accepted / disputed / waived
+
+**Record Fields:** dispatchId, routeCode, routeName, carrier, origin, destination, arrivedAt, reconStatus, huLoaded, huArrived, huDamaged, huMissing, huExtra, weightLoaded (kg), weightArrived (kg), freightCost (INR), discrepancies (array), reconBy, approvedBy, approvedAt, signedOffAt, notes
+
+**KPIs:** Pending count, In Progress count, Discrepancy count, Closed count, Total HU Missing, Total HU Damaged, Financial Impact (sum of discrepancy.financialImpact)
+
+**7-Day Trend:** arrived / reconciled / discrepancies per day
+
+**Business Rules:**
+- Weight variance ≤ 2 kg treated as within tolerance
+- Missing HU triggers financial impact = estimated value of HU
+- Damage impact estimated by field team
+- `approved` requires approvedBy and approvedAt
+- `closed` requires signedOffAt
+
+---
+
+### FR-08: CT Alerts Center (`/alerts`)
+
+**Purpose:** Unified alert inbox with acknowledgement workflow and analytics.
+
+**Alert Types:**
+
+| Type | Label | Badge Style |
+|---|---|---|
+| SLA_BREACH | SLA Breach | red |
+| HIGH_RISK | High Risk | orange |
+| ESCALATED_EXCEPTION | Escalated Exception | purple |
+| OVERDUE_RECONCILIATION | Overdue Reconciliation | amber |
+| INTEGRATION_FAILURE | Integration Failure | slate |
+
+**Alert Fields:** id, type, severity, message, dispatchId?, routeCode?, carrierName?, delayMins, firedAt, acknowledged, ackedAt?, ackedBy?, ackAction?, ackRemarks?
+
+**Acknowledgement Actions:**
+
+| Action Key | Label |
+|---|---|
+| carrier_escalated | Carrier Escalated |
+| alternate_vehicle | Alternate Vehicle Arranged |
+| route_changed | Route Changed |
+| delivery_replanned | Delivery Replanned |
+| driver_contacted | Driver Contacted |
+| hub_escalated | Hub Escalated |
+| customer_escalated | Customer Escalated |
+| monitoring_only | Monitoring Only |
+
+**Analytics Tabs:**
+- Top Delay Routes — routeCode, total exceptions, avg delay mins, breach count, OTD rate, trend
+- Top Delay Carriers — carrier, exceptions, avg delay, breach count, SLA score, trend
+- Chronic Lanes — route × carrier combinations with breach count, avg delay, last breach, status (critical/watch/improving)
+- Recovery Stats — avg recovery time (142m), P90 (310m), fastest (18m), slowest (720m); broken down by action type
+
+**Closure SLA:** Alert closure target = 240 minutes; 74% closed within SLA (48 of 65)
+
+**Global Alert Rail:** auto-opens on critical severity alert; sorted by severity → firedAt
+
+---
+
+### FR-09: Route Management (`/routes`)
+
+**Purpose:** Route-level performance scorecard with grade assignment and trend tracking.
+
+**Route Grade System:**
+
+| Grade | Score Range | Colour |
+|---|---|---|
+| A | 85–100 | Green |
+| B | 70–84 | Blue-green |
+| C | 55–69 | Amber |
+| D | 40–54 | Orange |
+| F | 0–39 | Red |
+
+**Route Fields:** routeCode, routeName, origin, destination, regionOrigin, regionDest, distanceKm, grade, gradeScore, otaPct, otdPct, slaCompliancePct, avgTransitHours, plannedTransitHours, delayMinutesAvg, costPerKm, freightRevenueM (₹M MTD), exceptionRate (per 100 dispatches), dispatchCount (MTD), 8-week dispatchTrend[], 8-week otdTrend[], topCarrier, topCarrierScore, lastException?, tags[]
+
+**KPIs:** Total Routes (10), Avg OTD, Grade A count, Grade D/F count, Avg Exception Rate, Total Dispatches
+
+**Charts:** Grade distribution donut; Region OTD bar (North 87%, West 88%, South 74%, East 66%)
+
+**Region Filter:** `r.regionOrigin.toLowerCase() === region`
+
+**Route Tags:** high-volume, ftl, short-haul, long-haul, high-frequency, south-corridor, west-corridor, north-corridor, east-corridor, cross-region, volatile, critical-watch, priority
+
+---
+
+### FR-10: Carrier Management (`/carriers`)
+
+**Purpose:** Carrier performance scorecard with tier management and contract oversight.
+
+**Carrier Tiers:**
+
+| Tier | Typical Score | Status Options |
+|---|---|---|
+| Platinum | 88–100 | active |
+| Gold | 75–87 | active |
+| Silver | 65–74 | active / under_review |
+| Bronze | 55–64 | active / under_review |
+| Probation | < 55 | probation |
+
+**Carrier Fields:** id, name, shortCode, tier, compositeScore, otdPct, slaCompliancePct, exceptionRatePer100, damageRatePct, responseTimeMins, freightCostIndex (100 = baseline), activeRoutes, monthlyDispatches, fleetsSize, hqCity, contactName, contactPhone, contractExpiry, lastAuditScore, lastAuditDate, status, 6-month scoreTrend[], 6-month otdTrend[], incidentCount (MTD), remarks?
+
+**KPIs:** Total (10), Avg Composite Score, Platinum count, Probation count, Under Review count, Avg OTD
+
+**Scoring Dimensions:** OTD%, SLA Compliance%, Exception Rate per 100, Damage Rate%, Avg Response Time (mins)
+
+**Business Rules:**
+- Probation status = composite score < 55 OR critical incident
+- Under Review = compliance breach or contract expiry approaching
+- Contract expiry triggers renewal workflow
+- Audit score tracked separately from composite score
+
+**Region Filter:** `matchesCity(c.hqCity)` using `cityRegion()` function
+
+---
+
+## 6. SLA and Escalation Rules
+
+| Condition | SLA Status | Alert Severity | Escalation Level | Notified |
+|---|---|---|---|---|
+| ETA within commitment | ok | — | 0 | — |
+| ≤ 4h remaining | at-risk | high | 0 | CT Operator |
+| SLA window expired | breached | critical | auto-exception | CT Operator |
+| Overdue ≥ 2h | breached | critical | 1 | Regional Manager |
+| Overdue ≥ 4h | breached | critical | 2 | Transport Head |
+| Overdue ≥ 8h | breached | critical | 3 | Control Tower direct ownership |
+
+---
+
+## 7. KPI Health Thresholds
+
+| Metric | Good | Warning | Danger |
+|---|---|---|---|
+| OTD / OTA / SLA Compliance | ≥ 90% | 75–89% | < 75% |
+| Open Exceptions | 0 | 1–5 | > 5 |
+| Vehicle Utilisation | ≥ 70% | 50–69% | < 50% |
+| Avg Delay | ≤ 1h | 1–3h | > 3h |
+| Carrier Composite Score | ≥ 80 | 65–79 | < 65 |
+| Route Exception Rate (per 100) | ≤ 2 | 2–5 | > 5 |
+| Cost vs Budget | ≤ 95% | 95–105% | > 105% |
+
+---
+
+## 8. Out of Scope (v1.0)
+
+- Real-time GPS vehicle tracking map
+- Backend API / database persistence
+- User authentication and RBAC
 - Email / SMS alert notifications
-- Mobile application
+- Mobile driver or hub staff app
+- ERP / GST / E-waybill API integration
+- Automated freight invoice processing
+- Report export to PDF
